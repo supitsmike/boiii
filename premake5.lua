@@ -82,32 +82,6 @@ newoption {
 	description = "Disable ownership checks."
 }
 
-
-newaction {
-	trigger = "version",
-	description = "Returns the version string for the current commit of the source code.",
-	onWorkspace = function(wks)
-		-- get current version via git
-		local proc = assert(io.popen(gitVersioningCommand, "r"))
-		local gitDescribeOutput = assert(proc:read('*a')):gsub("%s+", "")
-		proc:close()
-		local version = gitDescribeOutput
-
-		proc = assert(io.popen(gitCurrentBranchCommand, "r"))
-		local gitCurrentBranchOutput = assert(proc:read('*a')):gsub("%s+", "")
-		local gitCurrentBranchSuccess = proc:close()
-		if gitCurrentBranchSuccess then
-			-- We got a branch name, check if it is a feature branch
-			if gitCurrentBranchOutput ~= "develop" and gitCurrentBranchOutput ~= "master" and gitCurrentBranchOutput ~= "main" then
-				version = version .. "-" .. gitCurrentBranchOutput
-			end
-		end
-
-		print(version)
-		os.exit(0)
-	end
-}
-
 dependencies.load()
 
 workspace "boiii"
