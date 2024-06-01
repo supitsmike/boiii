@@ -189,8 +189,6 @@ project "client"
 
 	resincludedirs {"$(ProjectDir)src"}
 
-	dependson {"tlsdll"}
-
 	links {"common"}
 
 	prebuildcommands {"pushd %{_MAIN_SCRIPT_DIR}", "popd"}
@@ -200,30 +198,6 @@ project "client"
 	end
 
 	dependencies.imports()
-
-project "tlsdll"
-	kind "SharedLib"
-	language "C++"
-
-	symbols 'Off'
-	exceptionhandling "Off"
-
-	flags {"NoRuntimeChecks", "NoBufferSecurityCheck",  "OmitDefaultLibrary"}
-
-	buildoptions {"/Zc:threadSafeInit-"}
-	linkoptions {"/NODEFAULTLIB", "/IGNORE:4210"}
-
-	removebuildoptions {"/GL"}
-	removelinkoptions {"/LTCG"}
-
-	files {"./src/tlsdll/**.rc", "./src/tlsdll/**.hpp", "./src/tlsdll/**.cpp", "./src/tlsdll/resources/**.*"}
-
-	includedirs {"./src/tlsdll", "%{prj.location}/src"}
-
-	links {"common"}
-
-	resincludedirs {"$(ProjectDir)src"}
-
 
 group "Dependencies"
 	dependencies.projects()
