@@ -12,7 +12,7 @@
 #include <steam/steam.hpp>
 
 #include "game/game.hpp"
-#include "launcher/launcher.hpp"
+#include "proxy/proxy.hpp"
 #include "component/updater.hpp"
 
 namespace
@@ -34,12 +34,12 @@ namespace
 		if (!game_entry)
 		{
 			//throw std::runtime_error("Import '" + func + "' not found!");
-			return {nullptr, nullptr};
+			return { nullptr, nullptr };
 		}
 
 		const auto original_import = game_entry;
 		utils::hook::set(game_entry, function);
-		return {game_entry, original_import};
+		return { game_entry, original_import };
 	}
 
 	bool restart_app_if_necessary_stub()
@@ -140,46 +140,15 @@ namespace
 		}
 	} tls_runner;
 
-	FARPROC load_process(const std::string& procname)
-	{
-		const auto proc = loader::load_binary(procname);
-
-		auto* const peb = reinterpret_cast<PPEB>(__readgsqword(0x60));
-		peb->Reserved3[1] = proc.get_ptr();
-		static_assert(offsetof(PEB, Reserved3[1]) == 0x10);
-
-		return FARPROC(proc.get_ptr() + proc.get_relative_entry_point());
-	}
-
-	bool handle_process_runner()
-	{
-		const auto* const command = "-proc ";
-		const char* parent_proc = strstr(GetCommandLineA(), command);
-
-		if (!parent_proc)
-		{
-			return false;
-		}
-
-		const auto pid = DWORD(atoi(parent_proc + strlen(command)));
-		const utils::nt::handle<> process_handle = OpenProcess(SYNCHRONIZE, FALSE, pid);
-		if (process_handle)
-		{
-			WaitForSingleObject(process_handle, INFINITE);
-		}
-
-		return true;
-	}
-
 	void enable_dpi_awareness()
 	{
-		const utils::nt::library user32{"user32.dll"};
+		const utils::nt::library user32{ "user32.dll" };
 
 		{
 			const auto set_dpi = user32
-				                     ? user32.get_proc<BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT)>(
-					                     "SetProcessDpiAwarenessContext")
-				                     : nullptr;
+				? user32.get_proc<BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT)>(
+					"SetProcessDpiAwarenessContext")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -188,11 +157,11 @@ namespace
 		}
 
 		{
-			const utils::nt::library shcore{"shcore.dll"};
+			const utils::nt::library shcore{ "shcore.dll" };
 			const auto set_dpi = shcore
-				                     ? shcore.get_proc<HRESULT(WINAPI*)(PROCESS_DPI_AWARENESS)>(
-					                     "SetProcessDpiAwareness")
-				                     : nullptr;
+				? shcore.get_proc<HRESULT(WINAPI*)(PROCESS_DPI_AWARENESS)>(
+					"SetProcessDpiAwareness")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -202,9 +171,9 @@ namespace
 
 		{
 			const auto set_dpi = user32
-				                     ? user32.get_proc<BOOL(WINAPI*)()>(
-					                     "SetProcessDPIAware")
-				                     : nullptr;
+				? user32.get_proc<BOOL(WINAPI*)()>(
+					"SetProcessDPIAware")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi();
@@ -234,8 +203,8 @@ namespace
 
 		const std::wstring data = L"GpuPreference=2;";
 		RegSetValueExW(key, self.get_path().make_preferred().wstring().data(), 0, REG_SZ,
-		               reinterpret_cast<const BYTE*>(data.data()),
-		               static_cast<DWORD>((data.size() + 1u) * 2));
+			reinterpret_cast<const BYTE*>(data.data()),
+			static_cast<DWORD>((data.size() + 1u) * 2));
 	}
 
 	void validate_non_network_share()
@@ -251,112 +220,61 @@ namespace
 	}
 }
 
-int main()
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	if (handle_process_runner())
+	if (fdwReason == DLL_PROCESS_ATTACH)
 	{
-		return 0;
-	}
+		srand(static_cast<uint32_t>(time(nullptr)) ^ ~(GetTickCount() * GetCurrentProcessId()));
 
-	FARPROC entry_point{};
-	srand(uint32_t(time(nullptr)) ^ ~(GetTickCount() * GetCurrentProcessId()));
+		proxy::setup_proxy();
+		enable_dpi_awareness();
 
-	enable_dpi_awareness();
-
-	{
-		auto premature_shutdown = true;
-		const auto _ = utils::finally([&premature_shutdown]
 		{
-			if (premature_shutdown)
-			{
-				component_loader::pre_destroy();
-			}
-		});
-
-		try
-		{
-			validate_non_network_share();
-			remove_crash_file();
-			updater::update();
-
-			if (!utils::io::file_exists(launcher::get_launcher_ui_file().generic_wstring()))
-			{
-				throw std::runtime_error("BOIII needs an active internet connection for the first time you launch it.");
-			}
-
-			const auto client_binary = "BlackOps3.exe"s;
-			const auto server_binary = "BlackOps3_UnrankedDedicatedServer.exe"s;
-
-			const auto has_client = utils::io::file_exists(client_binary);
-			const auto has_server = utils::io::file_exists(server_binary);
-
-			const auto is_server = utils::flags::has_flag("dedicated") || (!has_client && has_server);
-
-			if (!has_client && !has_server)
-			{
-				throw std::runtime_error(
-					"Can't find a valid BlackOps3.exe or BlackOps3_UnrankedDedicatedServer.exe. Make sure you put boiii.exe in your Black Ops 3 installation folder.");
-			}
-
-			if (!is_server)
-			{
-				trigger_high_performance_gpu_switch();
-
-				const auto launch = utils::flags::has_flag("launch");
-				if (!launch && !utils::nt::is_wine() && !launcher::run())
+			auto premature_shutdown = true;
+			const auto _ = utils::finally([&premature_shutdown]
 				{
-					return 0;
-				}
-			}
+					if (premature_shutdown)
+					{
+						component_loader::pre_destroy();
+					}
+				});
 
-			if (!component_loader::activate(is_server))
+			try
 			{
-				return 1;
-			}
+				validate_non_network_share();
+				remove_crash_file();
+				updater::update();
 
-			entry_point = load_process(is_server ? server_binary : client_binary);
-			if (!entry_point)
-			{
-				throw std::runtime_error("Unable to load binary into memory");
-			}
+				const auto is_server = utils::flags::has_flag("dedicated");
 
-			if (is_server != game::is_server())
-			{
-				throw std::runtime_error("Bad binary loaded into memory");
-			}
-
-			if (!is_server && !game::is_client())
-			{
-				if (game::is_legacy_client())
+				if (!is_server)
 				{
-					throw std::runtime_error(
-						"You are using the outdated BlackOps3.exe. This version is not supported anymore. Please use the latest binary from Steam.");
+					trigger_high_performance_gpu_switch();
 				}
 
-				throw std::runtime_error("Bad binary loaded into memory");
+				if (!component_loader::activate(is_server))
+				{
+					return 1;
+				}
+
+				patch_imports();
+
+				if (!component_loader::post_load())
+				{
+					return 1;
+				}
+
+				premature_shutdown = false;
 			}
-
-			patch_imports();
-
-			if (!component_loader::post_load())
+			catch (std::exception& e)
 			{
+				game::show_error(e.what());
 				return 1;
 			}
+		}
 
-			premature_shutdown = false;
-		}
-		catch (std::exception& e)
-		{
-			game::show_error(e.what());
-			return 1;
-		}
+		g_call_tls_callbacks = true;
 	}
 
-	g_call_tls_callbacks = true;
-	return static_cast<int>(entry_point());
-}
-
-int __stdcall WinMain(HINSTANCE, HINSTANCE, PSTR, int)
-{
-	return main();
+	return TRUE;
 }
