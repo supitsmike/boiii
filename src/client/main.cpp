@@ -13,7 +13,6 @@
 
 #include "game/game.hpp"
 #include "proxy/proxy.hpp"
-#include "component/updater.hpp"
 
 namespace
 {
@@ -243,7 +242,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 			{
 				validate_non_network_share();
 				remove_crash_file();
-				updater::update();
 
 				const auto is_server = utils::flags::has_flag("dedicated");
 
