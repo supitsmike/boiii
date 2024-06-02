@@ -1,7 +1,6 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
 #include "game/game.hpp"
-#include "version.hpp"
 
 #include "scheduler.hpp"
 
@@ -21,7 +20,7 @@ namespace branding
 			const auto* font = reinterpret_cast<uint32_t*(*)()>(0x141CAC8E0_g)();
 			if (!font) return;
 
-			game::R_AddCmdDrawText("BOIII: " VERSION, std::numeric_limits<int>::max(), font, static_cast<float>(x),
+			game::R_AddCmdDrawText("BOIII", std::numeric_limits<int>::max(), font, static_cast<float>(x),
 			                       y + static_cast<float>(font[2]) * scale,
 			                       scale, scale, 0.0f, color, game::ITEM_TEXTSTYLE_NORMAL);
 		}

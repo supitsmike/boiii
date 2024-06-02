@@ -11,8 +11,6 @@
 
 #include <exception/minidump.hpp>
 
-#include <version.hpp>
-
 namespace exception
 {
 	namespace
@@ -135,7 +133,6 @@ namespace exception
 
 			line("BOIII Crash Dump");
 			line("");
-			line("Version: "s + VERSION);
 			line("Timestamp: "s + get_timestamp());
 			line(utils::string::va("Exception: 0x%08X", exceptioninfo->ExceptionRecord->ExceptionCode));
 			line(utils::string::va("Address: 0x%llX", exceptioninfo->ExceptionRecord->ExceptionAddress));
