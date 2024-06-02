@@ -12,6 +12,7 @@
 #include <steam/steam.hpp>
 
 #include "game/game.hpp"
+#include "proxy/proxy.hpp"
 #include "component/updater.hpp"
 
 namespace
@@ -33,12 +34,12 @@ namespace
 		if (!game_entry)
 		{
 			//throw std::runtime_error("Import '" + func + "' not found!");
-			return {nullptr, nullptr};
+			return { nullptr, nullptr };
 		}
 
 		const auto original_import = game_entry;
 		utils::hook::set(game_entry, function);
-		return {game_entry, original_import};
+		return { game_entry, original_import };
 	}
 
 	bool restart_app_if_necessary_stub()
@@ -141,13 +142,13 @@ namespace
 
 	void enable_dpi_awareness()
 	{
-		const utils::nt::library user32{"user32.dll"};
+		const utils::nt::library user32{ "user32.dll" };
 
 		{
 			const auto set_dpi = user32
-				                     ? user32.get_proc<BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT)>(
-					                     "SetProcessDpiAwarenessContext")
-				                     : nullptr;
+				? user32.get_proc<BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT)>(
+					"SetProcessDpiAwarenessContext")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -156,11 +157,11 @@ namespace
 		}
 
 		{
-			const utils::nt::library shcore{"shcore.dll"};
+			const utils::nt::library shcore{ "shcore.dll" };
 			const auto set_dpi = shcore
-				                     ? shcore.get_proc<HRESULT(WINAPI*)(PROCESS_DPI_AWARENESS)>(
-					                     "SetProcessDpiAwareness")
-				                     : nullptr;
+				? shcore.get_proc<HRESULT(WINAPI*)(PROCESS_DPI_AWARENESS)>(
+					"SetProcessDpiAwareness")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -170,9 +171,9 @@ namespace
 
 		{
 			const auto set_dpi = user32
-				                     ? user32.get_proc<BOOL(WINAPI*)()>(
-					                     "SetProcessDPIAware")
-				                     : nullptr;
+				? user32.get_proc<BOOL(WINAPI*)()>(
+					"SetProcessDPIAware")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi();
@@ -202,8 +203,8 @@ namespace
 
 		const std::wstring data = L"GpuPreference=2;";
 		RegSetValueExW(key, self.get_path().make_preferred().wstring().data(), 0, REG_SZ,
-		               reinterpret_cast<const BYTE*>(data.data()),
-		               static_cast<DWORD>((data.size() + 1u) * 2));
+			reinterpret_cast<const BYTE*>(data.data()),
+			static_cast<DWORD>((data.size() + 1u) * 2));
 	}
 
 	void validate_non_network_share()
@@ -225,54 +226,55 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	{
 		srand(static_cast<uint32_t>(time(nullptr)) ^ ~(GetTickCount() * GetCurrentProcessId()));
 
-	enable_dpi_awareness();
+		proxy::setup_proxy();
+		enable_dpi_awareness();
 
-	{
-		auto premature_shutdown = true;
-		const auto _ = utils::finally([&premature_shutdown]
 		{
-			if (premature_shutdown)
+			auto premature_shutdown = true;
+			const auto _ = utils::finally([&premature_shutdown]
+				{
+					if (premature_shutdown)
+					{
+						component_loader::pre_destroy();
+					}
+				});
+
+			try
 			{
-				component_loader::pre_destroy();
-			}
-		});
-
-		try
-		{
-			validate_non_network_share();
-			remove_crash_file();
-			updater::update();
+				validate_non_network_share();
+				remove_crash_file();
+				updater::update();
 
 				const auto is_server = utils::flags::has_flag("dedicated");
 
-			if (!is_server)
-			{
-				trigger_high_performance_gpu_switch();
-			}
+				if (!is_server)
+				{
+					trigger_high_performance_gpu_switch();
+				}
 
-			if (!component_loader::activate(is_server))
+				if (!component_loader::activate(is_server))
+				{
+					return 1;
+				}
+
+				patch_imports();
+
+				if (!component_loader::post_load())
+				{
+					return 1;
+				}
+
+				premature_shutdown = false;
+			}
+			catch (std::exception& e)
 			{
+				game::show_error(e.what());
 				return 1;
 			}
-
-			patch_imports();
-
-			if (!component_loader::post_load())
-			{
-				return 1;
-			}
-
-			premature_shutdown = false;
 		}
-		catch (std::exception& e)
-		{
-			game::show_error(e.what());
-			return 1;
-		}
+
+		g_call_tls_callbacks = true;
 	}
-
-	g_call_tls_callbacks = true;
-}
 
 	return TRUE;
 }
