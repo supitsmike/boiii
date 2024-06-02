@@ -298,13 +298,15 @@ project "client"
 	pchheader "std_include.hpp"
 	pchsource "src/client/std_include.cpp"
 
-	files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*"}
+	files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*", "./src/client/proxy/**.*"}
 
 	includedirs {"./src/client", "./src/common", "%{prj.location}/src"}
 
 	resincludedirs {"$(ProjectDir)src"}
 
 	links {"common"}
+	
+	buildaction ("Masm")
 
 	prebuildcommands {"pushd %{_MAIN_SCRIPT_DIR}", "tools\\premake5 generate-buildinfo", "popd"}
 
