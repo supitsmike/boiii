@@ -1,6 +1,5 @@
 #include <std_include.hpp>
 #include "loader.hpp"
-#include "tls.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
@@ -48,7 +47,7 @@ namespace loader
 					}
 					else
 					{
-						const auto* import = PIMAGE_IMPORT_BY_NAME(target.get_ptr() + *name_table_entry);
+						const auto * import = PIMAGE_IMPORT_BY_NAME(target.get_ptr() + *name_table_entry);
 						function_name = import->Name;
 						function_procname = function_name.data();
 					}
@@ -62,7 +61,7 @@ namespace loader
 					if (!function)
 					{
 						throw std::runtime_error(utils::string::va("Unable to load import '%s' from library '%s'",
-						                                           function_name.data(), name.data()));
+							function_name.data(), name.data()));
 					}
 
 					utils::hook::set(address_table_entry, reinterpret_cast<uintptr_t>(function));
@@ -134,39 +133,6 @@ namespace loader
 				relocation = offset_pointer<PIMAGE_BASE_RELOCATION>(relocation, relocation->SizeOfBlock);
 			}
 		}
-
-		void load_tls(const utils::nt::library& target)
-		{
-			if (target.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].Size)
-			{
-				auto* target_tls = tls::allocate_tls_index();
-				const auto* const source_tls = reinterpret_cast<PIMAGE_TLS_DIRECTORY>(target.get_ptr() + target.
-					get_optional_header()
-					->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
-
-				auto* target_tls_start = PVOID(target_tls->StartAddressOfRawData);
-				auto* tls_start = PVOID(source_tls->StartAddressOfRawData);
-				const auto tls_size = source_tls->EndAddressOfRawData - source_tls->StartAddressOfRawData;
-				const auto tls_index = *reinterpret_cast<DWORD*>(target_tls->AddressOfIndex);
-
-				utils::hook::set<DWORD>(source_tls->AddressOfIndex, tls_index);
-
-				if (target_tls->AddressOfCallBacks)
-				{
-					utils::hook::set<void*>(target_tls->AddressOfCallBacks, nullptr);
-				}
-
-				DWORD old_protect;
-				VirtualProtect(target_tls_start, tls_size, PAGE_READWRITE, &old_protect);
-
-				auto* const tls_base = *reinterpret_cast<LPVOID*>(__readgsqword(0x58) + 8ull * tls_index);
-				std::memmove(tls_base, tls_start, tls_size);
-				std::memmove(target_tls_start, tls_start, tls_size);
-
-				VirtualProtect(target_tls, sizeof(*target_tls), PAGE_READWRITE, &old_protect);
-				*target_tls = *source_tls;
-			}
-		}
 	}
 
 	utils::nt::library load_binary(const std::string& filename)
@@ -174,12 +140,11 @@ namespace loader
 		const auto target = utils::nt::library::load(filename);
 		if (!target)
 		{
-			throw std::runtime_error{"Failed to map: " + filename};
+			throw std::runtime_error{ "Failed to map: " + filename };
 		}
 
 		load_relocations(target);
 		load_imports(target);
-		load_tls(target);
 
 		return target;
 	}
