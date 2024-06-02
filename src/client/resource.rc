@@ -102,12 +102,6 @@ DW_FASTFILE           RCDATA "resources/dw/core_ffotd_tu32_593.ff"
 DW_KEYS               RCDATA "resources/dw/keys.txt"
 DW_QOSCONFIG          RCDATA "resources/dw/qosconfig4.csv"
 
-#ifdef _DEBUG
-TLS_DLL               RCDATA "../../build/bin/x64/Debug/tlsdll.dll"
-#else
-TLS_DLL               RCDATA "../../build/bin/x64/Release/tlsdll.dll"
-#endif
-
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
