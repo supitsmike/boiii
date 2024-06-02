@@ -290,10 +290,10 @@ project "common"
 	dependencies.imports()
 
 project "client"
-	kind "WindowedApp"
+	kind "SharedLib"
 	language "C++"
 
-	targetname "boiii"
+	targetname "d3d11"
 
 	pchheader "std_include.hpp"
 	pchsource "src/client/std_include.cpp"
