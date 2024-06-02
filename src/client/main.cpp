@@ -12,8 +12,6 @@
 #include <steam/steam.hpp>
 
 #include "game/game.hpp"
-#include "launcher/launcher.hpp"
-#include "component/updater.hpp"
 
 namespace
 {
@@ -34,12 +32,12 @@ namespace
 		if (!game_entry)
 		{
 			//throw std::runtime_error("Import '" + func + "' not found!");
-			return {nullptr, nullptr};
+			return { nullptr, nullptr };
 		}
 
 		const auto original_import = game_entry;
 		utils::hook::set(game_entry, function);
-		return {game_entry, original_import};
+		return { game_entry, original_import };
 	}
 
 	bool restart_app_if_necessary_stub()
@@ -173,13 +171,13 @@ namespace
 
 	void enable_dpi_awareness()
 	{
-		const utils::nt::library user32{"user32.dll"};
+		const utils::nt::library user32{ "user32.dll" };
 
 		{
 			const auto set_dpi = user32
-				                     ? user32.get_proc<BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT)>(
-					                     "SetProcessDpiAwarenessContext")
-				                     : nullptr;
+				? user32.get_proc<BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT)>(
+					"SetProcessDpiAwarenessContext")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -188,11 +186,11 @@ namespace
 		}
 
 		{
-			const utils::nt::library shcore{"shcore.dll"};
+			const utils::nt::library shcore{ "shcore.dll" };
 			const auto set_dpi = shcore
-				                     ? shcore.get_proc<HRESULT(WINAPI*)(PROCESS_DPI_AWARENESS)>(
-					                     "SetProcessDpiAwareness")
-				                     : nullptr;
+				? shcore.get_proc<HRESULT(WINAPI*)(PROCESS_DPI_AWARENESS)>(
+					"SetProcessDpiAwareness")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -202,9 +200,9 @@ namespace
 
 		{
 			const auto set_dpi = user32
-				                     ? user32.get_proc<BOOL(WINAPI*)()>(
-					                     "SetProcessDPIAware")
-				                     : nullptr;
+				? user32.get_proc<BOOL(WINAPI*)()>(
+					"SetProcessDPIAware")
+				: nullptr;
 			if (set_dpi)
 			{
 				set_dpi();
@@ -214,9 +212,6 @@ namespace
 
 	void trigger_high_performance_gpu_switch()
 	{
-		// Make sure to link D3D11, as this might trigger high performance GPU
-		static volatile auto _ = &D3D11CreateDevice;
-
 		const auto key = utils::nt::open_or_create_registry_key(
 			HKEY_CURRENT_USER, R"(Software\Microsoft\DirectX\UserGpuPreferences)");
 		if (!key)
@@ -234,8 +229,8 @@ namespace
 
 		const std::wstring data = L"GpuPreference=2;";
 		RegSetValueExW(key, self.get_path().make_preferred().wstring().data(), 0, REG_SZ,
-		               reinterpret_cast<const BYTE*>(data.data()),
-		               static_cast<DWORD>((data.size() + 1u) * 2));
+			reinterpret_cast<const BYTE*>(data.data()),
+			static_cast<DWORD>((data.size() + 1u) * 2));
 	}
 
 	void validate_non_network_share()
@@ -251,112 +246,74 @@ namespace
 	}
 }
 
-int main()
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	if (handle_process_runner())
+	if (fdwReason == DLL_PROCESS_ATTACH)
 	{
-		return 0;
-	}
+		srand(uint32_t(time(nullptr)) ^ ~(GetTickCount() * GetCurrentProcessId()));
 
-	FARPROC entry_point{};
-	srand(uint32_t(time(nullptr)) ^ ~(GetTickCount() * GetCurrentProcessId()));
+		enable_dpi_awareness();
 
-	enable_dpi_awareness();
-
-	{
-		auto premature_shutdown = true;
-		const auto _ = utils::finally([&premature_shutdown]
 		{
-			if (premature_shutdown)
+			auto premature_shutdown = true;
+			const auto _ = utils::finally([&premature_shutdown]
+				{
+					if (premature_shutdown)
+					{
+						component_loader::pre_destroy();
+					}
+				});
+
+			try
 			{
-				component_loader::pre_destroy();
-			}
-		});
+				validate_non_network_share();
+				remove_crash_file();
 
-		try
-		{
-			validate_non_network_share();
-			remove_crash_file();
-			updater::update();
-
-			if (!utils::io::file_exists(launcher::get_launcher_ui_file().generic_wstring()))
-			{
-				throw std::runtime_error("BOIII needs an active internet connection for the first time you launch it.");
-			}
-
-			const auto client_binary = "BlackOps3.exe"s;
-			const auto server_binary = "BlackOps3_UnrankedDedicatedServer.exe"s;
-
-			const auto has_client = utils::io::file_exists(client_binary);
-			const auto has_server = utils::io::file_exists(server_binary);
-
-			const auto is_server = utils::flags::has_flag("dedicated") || (!has_client && has_server);
-
-			if (!has_client && !has_server)
-			{
-				throw std::runtime_error(
-					"Can't find a valid BlackOps3.exe or BlackOps3_UnrankedDedicatedServer.exe. Make sure you put boiii.exe in your Black Ops 3 installation folder.");
-			}
-
-			if (!is_server)
-			{
 				trigger_high_performance_gpu_switch();
 
-				const auto launch = utils::flags::has_flag("launch");
-				if (!launch && !utils::nt::is_wine() && !launcher::run())
+				if (!component_loader::activate(false))
 				{
-					return 0;
-				}
-			}
-
-			if (!component_loader::activate(is_server))
-			{
-				return 1;
-			}
-
-			entry_point = load_process(is_server ? server_binary : client_binary);
-			if (!entry_point)
-			{
-				throw std::runtime_error("Unable to load binary into memory");
-			}
-
-			if (is_server != game::is_server())
-			{
-				throw std::runtime_error("Bad binary loaded into memory");
-			}
-
-			if (!is_server && !game::is_client())
-			{
-				if (game::is_legacy_client())
-				{
-					throw std::runtime_error(
-						"You are using the outdated BlackOps3.exe. This version is not supported anymore. Please use the latest binary from Steam.");
+					return 1;
 				}
 
-				throw std::runtime_error("Bad binary loaded into memory");
+				patch_imports();
+
+				if (!component_loader::post_load())
+				{
+					return 1;
+				}
+
+				premature_shutdown = false;
 			}
-
-			patch_imports();
-
-			if (!component_loader::post_load())
+			catch (std::exception& e)
 			{
+				game::show_error(e.what());
 				return 1;
 			}
+		}
 
-			premature_shutdown = false;
-		}
-		catch (std::exception& e)
-		{
-			game::show_error(e.what());
-			return 1;
-		}
+		g_call_tls_callbacks = true;
 	}
 
-	g_call_tls_callbacks = true;
-	return static_cast<int>(entry_point());
+	return TRUE;
 }
 
-int __stdcall WinMain(HINSTANCE, HINSTANCE, PSTR, int)
+extern "C" __declspec(dllexport)
+HRESULT D3D11CreateDevice(void* adapter, const uint64_t driver_type,
+	const HMODULE software, const UINT flags,
+	const void* p_feature_levels, const UINT feature_levels,
+	const UINT sdk_version, void** device, void* feature_level,
+	void** immediate_context)
 {
-	return main();
+	static auto func = []
+		{
+			char dir[MAX_PATH]{ 0 };
+			GetSystemDirectoryA(dir, sizeof(dir));
+
+			const auto d3d11 = utils::nt::library::load(dir + "/d3d11.dll"s);
+			return d3d11.get_proc<decltype(&D3D11CreateDevice)>("D3D11CreateDevice");
+		}();
+
+	return func(adapter, driver_type, software, flags, p_feature_levels, feature_levels, sdk_version, device,
+		feature_level, immediate_context);
 }
