@@ -12,18 +12,9 @@ enum class component_priority
 	arxan,
 };
 
-enum class component_type
+struct component_interface
 {
-	client,
-	server,
-	any,
-};
-
-struct generic_component
-{
-	static constexpr component_type type = component_type::any;
-
-	virtual ~generic_component() = default;
+	virtual ~component_interface() = default;
 
 	virtual void post_load()
 	{
@@ -41,14 +32,4 @@ struct generic_component
 	{
 		return component_priority::min;
 	}
-};
-
-struct client_component : generic_component
-{
-	static constexpr component_type type = component_type::client;
-};
-
-struct server_component : generic_component
-{
-	static constexpr component_type type = component_type::server;
 };

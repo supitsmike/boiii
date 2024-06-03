@@ -9,7 +9,6 @@
 #include <utils/string.hpp>
 
 #include "command.hpp"
-#include "client_command.hpp"
 
 namespace chat
 {
@@ -95,12 +94,7 @@ namespace chat
 
 	const char* get_client_name(const uint64_t xuid)
 	{
-		if (xuid == 0xFFFFFFFF)
-		{
-			return "Server";
-		}
-
-		if (xuid < 19 && !game::is_server())
+		if (xuid < 19)
 		{
 			char buffer[256]{};
 			game::CL_GetClientName(0, static_cast<int>(xuid - 1), buffer, sizeof(buffer), true);
@@ -111,72 +105,18 @@ namespace chat
 		return "Unknown Soldier";
 	}
 
-	class component final : public generic_component
+	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override
 		{
-			utils::hook::call(game::select(0x141974B04, 0x14029908A), divert_xuid_to_client_num_stub);
+			utils::hook::call(0x141974B04_g, divert_xuid_to_client_num_stub);
 
-			if (game::is_server())
-			{
-				client_command::add("say", cmd_say_f);
-				client_command::add("say_team", cmd_say_f);
+			// Ignore some check that suppresses the chat
+			utils::hook::nop(0x141DEA9BD_g, 2);
 
-				client_command::add("chat", cmd_chat_f);
-
-				// Overwrite say command
-				utils::hook::jump(0x14052A6C0_g, +[]
-				{
-					if (!game::is_server_running())
-					{
-						printf("Server is not running\n");
-						return;
-					}
-
-					const command::params params{};
-					const auto text = params.join(1);
-
-					send_chat_message(-1, text);
-					printf("Server: %s\n", text.data());
-				});
-
-				// Overwrite tell command
-				utils::hook::jump(0x14052A7E0_g, +[]
-				{
-					if (!game::is_server_running())
-					{
-						printf("Server is not running\n");
-						return;
-					}
-
-					const command::params params{};
-					if (params.size() < 2)
-					{
-						return;
-					}
-
-					const auto client = atoi(params[1]);
-					const auto text = params.join(2);
-
-					send_chat_message(client, text);
-					printf("Server -> %i: %s\n", client, text.data());
-				});
-
-				// Kill say fallback
-				utils::hook::set<uint8_t>(0x1402FF987_g, 0xEB);
-
-				g_deadChat = game::register_dvar_bool("g_deadChat", false, game::DVAR_NONE, "Allow dead players to chat with living players");
-				utils::hook::jump(0x140299051_g, utils::hook::assemble(g_say_to_stub));
-			}
-			else
-			{
-				// Ignore some check that suppresses the chat
-				utils::hook::nop(0x141DEA9BD_g, 2);
-
-				// Add chat history to the in-game console
-				utils::hook::call(0x141DEAA0F_g, cl_handle_chat); // I_strcpy
-			}
+			// Add chat history to the in-game console
+			utils::hook::call(0x141DEAA0F_g, cl_handle_chat); // I_strcpy
 		}
 	};
 }

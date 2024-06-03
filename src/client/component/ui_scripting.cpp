@@ -213,7 +213,7 @@ namespace ui_scripting
 			setup_lua_globals();
 
 			const utils::nt::library host{};
-			const auto folder = game::is_server() ? "lobby_scripts/" : "ui_scripts/";
+			const auto folder = "ui_scripts/";
 			load_scripts((game::get_appdata_path() / "data" / folder).string());
 			load_scripts((host.get_folder() / "boiii" / folder).string());
 		}
@@ -243,7 +243,7 @@ namespace ui_scripting
 		{
 			ui_cod_init_hook.invoke(frontend);
 
-			if (!game::is_server() && game::Com_IsRunningUILevel())
+			if (game::Com_IsRunningUILevel())
 			{
 				// Fetch the names of the local files so file overrides are already handled
 				globals = {};
@@ -300,7 +300,7 @@ namespace ui_scripting
 				return load_buffer(globals.raw_script_name, utils::io::read_file(globals.raw_script_name));
 			}
 
-			return utils::hook::invoke<int>(game::select(0x141D3AFB0, 0x1403E4090), state, compiler_options, reader,
+			return utils::hook::invoke<int>(0x141D3AFB0_g, state, compiler_options, reader,
 			                                reader_data, debug_reader,
 			                                debug_reader_data, chunk_name);
 		}
@@ -463,23 +463,18 @@ namespace ui_scripting
 		return closure;
 	}
 
-	class component final : public generic_component
+	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override
 		{
-			utils::hook::call(game::select(0x141D4979A, 0x1403F233A), hks_load_stub);
+			utils::hook::call(0x141D4979A_g, hks_load_stub);
 
-			hks_package_require_hook.create(game::select(0x141D28EF0, 0x1403D7FC0), hks_package_require_stub);
+			hks_package_require_hook.create(0x141D28EF0_g, hks_package_require_stub);
 			ui_cod_init_hook.create(game::UI_CoD_Init, ui_cod_init_stub);
 			ui_cod_lobbyui_init_hook.create(game::UI_CoD_LobbyUI_Init, ui_cod_lobbyui_init_stub);
-			ui_shutdown_hook.create(game::select(0x14270DE00, 0x1404A1280), ui_shutdown_stub);
-			lua_cod_getrawfile_hook.create(game::select(0x141F0EFE0, 0x1404BCB70), lua_cod_getrawfile_stub);
-
-			if (game::is_server())
-			{
-				return;
-			}
+			ui_shutdown_hook.create(0x14270DE00_g, ui_shutdown_stub);
+			lua_cod_getrawfile_hook.create(0x141F0EFE0_g, lua_cod_getrawfile_stub);
 
 			ui_init_hook.create(0x142704FF0_g, ui_init_stub);
 			cl_first_snapshot_hook.create(0x141320E60_g, cl_first_snapshot_stub);

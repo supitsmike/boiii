@@ -152,7 +152,7 @@ namespace splash
 		}
 	}
 
-	struct component final : client_component
+	struct component final : component_interface
 	{
 		component()
 		{

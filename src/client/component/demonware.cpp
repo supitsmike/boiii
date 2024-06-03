@@ -443,7 +443,7 @@ namespace demonware
 		}
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		component()
 		{
@@ -478,15 +478,10 @@ namespace demonware
 		{
 			server_thread = utils::thread::create_named_thread("Demonware", server_main);
 
-			utils::hook::set<uint8_t>(game::select(0x14293DC69, 0x1407D5879), 0x0); // CURLOPT_SSL_VERIFYPEER
-			utils::hook::set<uint8_t>(game::select(0x15C293850, 0x1407D5865), 0xAF); // CURLOPT_SSL_VERIFYHOST
+			utils::hook::set<uint8_t>(0x14293DC69_g, 0x0); // CURLOPT_SSL_VERIFYPEER
+			utils::hook::set<uint8_t>(0x15C293850_g, 0xAF); // CURLOPT_SSL_VERIFYHOST
 
-			utils::hook::copy_string(game::select(0x1430B8670, 0x140EE4C68), "http://prod.umbrella.demonware.net");
-
-			if (game::is_server())
-			{
-				return;
-			}
+			utils::hook::copy_string(0x1430B8670_g, "http://prod.umbrella.demonware.net");
 
 			utils::hook::copy_string(0x1430B8B70_g, "http://prod.uno.demonware.net/v1.0");
 

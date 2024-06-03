@@ -162,13 +162,10 @@ namespace profile_infos
 			}
 		});
 
-		if (!game::is_server())
+		const auto info = get_profile_info();
+		if (info)
 		{
-			const auto info = get_profile_info();
-			if (info)
-			{
-				distribute_profile_info_to_user(addr, steam::SteamUser()->GetSteamID().bits, *info);
-			}
+			distribute_profile_info_to_user(addr, steam::SteamUser()->GetSteamID().bits, *info);
 		}
 	}
 
@@ -240,15 +237,13 @@ namespace profile_infos
 		utils::io::write_file("boiii_players/user/profile_info", data);
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
 			scheduler::loop(clean_cached_profile_infos, scheduler::main, 5s);
 
-			if (game::is_client())
-			{
-				network::on("profileInfo", [](const game::netadr_t& server, const network::data_view& data)
+			network::on("profileInfo", [](const game::netadr_t& server, const network::data_view& data)
 				{
 					if (!party::is_host(server))
 					{
@@ -267,7 +262,6 @@ namespace profile_infos
 						add_profile_info(user_id, info);
 					}
 				});
-			}
 		}
 	};
 }

@@ -54,13 +54,11 @@ namespace network
 
 		void handle_command_stub(utils::hook::assembler& a)
 		{
-			const auto sv = game::is_server();
-
 			a.pushad64();
 
 			a.mov(rdx, rcx); // command
-			a.mov(r8, sv ? r15 : r12); // msg
-			a.mov(rcx, sv ? r14 : r15); // address
+			a.mov(r8, r12); // msg
+			a.mov(rcx, r15); // address
 
 			a.call_aligned(handle_command);
 
@@ -298,73 +296,62 @@ namespace network
 		              sizeof(address));
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
 			scheduler::loop(game::fragment_handler::clean, scheduler::async, 5s);
 
 			// don't increment data pointer to optionally skip socket byte
-			utils::hook::nop(game::select(0x1423322B6, 0x140596DF6), 4);
+			utils::hook::nop(0x1423322B6_g, 4);
 
 			// optionally read socket byte
-			utils::hook::call(game::select(0x142332283, 0x140596DC3), read_socket_byte_stub);
+			utils::hook::call(0x142332283_g, read_socket_byte_stub);
 
 			// skip checksum verification
-			utils::hook::call(game::select(0x1423322C1, 0x140596E01), verify_checksum_stub);
+			utils::hook::call(0x1423322C1_g, verify_checksum_stub);
 
 			// don't add checksum to packet
-			utils::hook::set<uint8_t>(game::select(0x14233249E, 0x140596F2E), 0);
+			utils::hook::set<uint8_t>(0x14233249E_g, 0);
 
 			// Recreate NET_SendPacket to increase max packet size
-			//utils::hook::jump(game::select(0x1423323B0, 0x140596E40), net_sendpacket_stub);
+			//utils::hook::jump(0x1423323B0_g, net_sendpacket_stub);
 
 			// set initial connection state to challenging
-			utils::hook::set<uint32_t>(game::select(0x14134C6E0, 0x14018E574), 4);
+			utils::hook::set<uint32_t>(0x14134C6E0_g, 4);
 
 			// intercept command handling
-			utils::hook::call(game::select(0x14134D146, 0x14018EED0), utils::hook::assemble(handle_command_stub));
+			utils::hook::call(0x14134D146_g, utils::hook::assemble(handle_command_stub));
 
 			// don't kick clients without dw handle
-			utils::hook::set<uint8_t>(game::select(0x14224DEAD, 0x1405315F9), 0xEB);
+			utils::hook::set<uint8_t>(0x14224DEAD_g, 0xEB);
 
 			// Skip DW stuff in NetAdr_ToString
-			utils::hook::set<uint8_t>(game::select(0x142172EF2, 0x140515881), 0xEB);
+			utils::hook::set<uint8_t>(0x142172EF2_g, 0xEB);
 
 			// NA_IP -> NA_RAWIP in NetAdr_ToString
-			utils::hook::set<uint8_t>(game::select(0x142172ED4, 0x140515864), game::NA_RAWIP);
+			utils::hook::set<uint8_t>(0x142172ED4_g, game::NA_RAWIP);
 
 			// Kill 'echo' OOB handler
-			utils::hook::set<uint8_t>(game::select(0x14134D0FB, 0x14018EE82), 0xEB);
+			utils::hook::set<uint8_t>(0x14134D0FB_g, 0xEB);
 
-			if (game::is_server())
-			{
-				// Remove restrictions for rcon commands
-				utils::hook::call(0x140538D5C_g, con_restricted_execute_buf_stub); // SVC_RemoteCommand
-
-				// Kill 'error' OOB handler on the dedi
-				utils::hook::nop(0x14018EF8B_g, 5);
-			}
-			else
-			{
-				// Truncate error string to make sure there are no buffer overruns later
-				utils::hook::call(0x14134D206_g, com_error_oob_stub);
-			}
+			// Truncate error string to make sure there are no buffer overruns later
+			utils::hook::call(0x14134D206_g, com_error_oob_stub);
 
 			// TODO: Fix that
 			scheduler::once(create_ip_socket, scheduler::main);
 
 			// Kill lobby system
-			handle_packet_internal_hook.create(game::select(0x141EF7FE0, 0x1404A5B90), &handle_packet_internal_stub);
+			handle_packet_internal_hook.create(0x141EF7FE0_g, &handle_packet_internal_stub);
 
 			// Kill voice chat
-			utils::hook::set<uint32_t>(game::select(0x141359310, 0x14018FE40), 0xC3C03148);
+			utils::hook::set<uint32_t>(0x141359310_g, 0xC3C03148);
 
 			// Don't let the game bind sockets anymore
-			utils::hook::set(game::select(0x15AAE9344, 0x14B4BD828), bind_stub);
+			utils::hook::set(0x15AAE9344_g, bind_stub);
 
 			// Set cl_maxpackets to 100
-			utils::hook::set<uint8_t>(game::select(0x1412FF342, 0x140177A32), 100 - 15);
+			utils::hook::set<uint8_t>(0x1412FF342_g, 100 - 15);
 		}
 	};
 }

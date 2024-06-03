@@ -187,16 +187,11 @@ namespace loot
 		}
 	};
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
-			gscr_isitempurchasedforclientnum_hook.create(game::select(0x1415F1490, 0x140252A20), gscr_isitempurchasedforclientnum_stub);
-
-			if (game::is_server())
-			{
-				return;
-			}
+			gscr_isitempurchasedforclientnum_hook.create(0x1415F1490_g, gscr_isitempurchasedforclientnum_stub);
 
 			dvar_cg_unlockall_loot = game::register_dvar_bool("cg_unlockall_loot", false, game::DVAR_ARCHIVE, "Unlocks blackmarket loot");
 			dvar_cg_unlockall_purchases = game::register_dvar_bool("cg_unlockall_purchases", false, game::DVAR_ARCHIVE, "Unlock all purchases with tokens");

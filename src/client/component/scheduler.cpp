@@ -149,7 +149,7 @@ namespace scheduler
 		}, type, delay);
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_load() override
 		{
@@ -165,16 +165,13 @@ namespace scheduler
 
 		void post_unpack() override
 		{
-			if (!game::is_server())
-			{
-				// some func called before R_EndFrame, maybe SND_EndFrame?
-				r_end_frame_hook.create(0x142272B00_g, r_end_frame_stub);
-			}
+			// some func called before R_EndFrame, maybe SND_EndFrame?
+			r_end_frame_hook.create(0x142272B00_g, r_end_frame_stub);
 
 			// Com_Frame_Try_Block_Function
-			main_frame_hook.create(game::select(0x1420F8E00, 0x1405020E0), main_frame_stub);
+			main_frame_hook.create(0x1420F8E00_g, main_frame_stub);
 
-			utils::hook::call(game::select(0x14225522E, 0x140538427), g_clear_vehicle_inputs_stub);
+			utils::hook::call(0x14225522E_g, g_clear_vehicle_inputs_stub);
 		}
 
 		void pre_destroy() override

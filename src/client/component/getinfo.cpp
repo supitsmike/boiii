@@ -73,10 +73,10 @@ namespace getinfo
 
 	bool is_host()
 	{
-		return game::SV_Loaded() && (game::is_server() || !game::Com_IsRunningUILevel());
+		return game::SV_Loaded() && !game::Com_IsRunningUILevel();
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
@@ -88,11 +88,10 @@ namespace getinfo
 				info.set("challenge", std::string{ data.begin(), data.end() });
 				info.set("gamename", "T7");
 				info.set("hostname",
-				         game::get_dvar_string(game::is_server() ? "live_steam_server_name" : "sv_hostname"));
+				         game::get_dvar_string("sv_hostname"));
 				info.set("gametype", game::get_dvar_string("g_gametype"));
 				//info.set("sv_motd", get_dvar_string("sv_motd"));
-				info.set("description",
-				         game::is_server() ? game::get_dvar_string("live_steam_server_description") : "");
+				info.set("description", "");
 				info.set("xuid", utils::string::va("%llX", steam::SteamUser()->GetSteamID().bits));
 				info.set("mapname", game::get_dvar_string("mapname"));
 				info.set("isPrivate", game::get_dvar_string("g_password").empty() ? "0" : "1");
@@ -104,7 +103,7 @@ namespace getinfo
 				info.set("playmode", std::to_string(game::Com_SessionMode_GetMode()));
 				info.set("gamemode", std::to_string(game::Com_SessionMode_GetGameMode()));
 				info.set("sv_running", std::to_string(game::is_server_running()));
-				info.set("dedicated", game::is_server() ? "1" : "0");
+				info.set("dedicated", "0");
 				info.set("hc", std::to_string(game::Com_GametypeSettings_GetUInt("hardcoremode", false)));
 				info.set("modName", workshop::get_mod_resized_name());
 				info.set("modId", workshop::get_mod_publisher_id());

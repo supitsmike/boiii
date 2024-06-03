@@ -58,26 +58,26 @@ namespace patches
 		}
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
 			// print hexadecimal xuids in chat game log command
-			utils::hook::set<char>(game::select(0x142FD9362, 0x140E16FA2), 'x');
+			utils::hook::set<char>(0x142FD9362_g, 'x');
 
 			// don't make script errors fatal error
-			utils::hook::call(game::select(0x1412CAC4D, 0x140158EB2), script_errors_stub);
+			utils::hook::call(0x1412CAC4D_g, script_errors_stub);
 
 			// change 4 character name limit to 3 characters
-			utils::hook::set<uint8_t>(game::select(0x14224DA53, 0x140531143), 3);
-			utils::hook::set<uint8_t>(game::select(0x14224DBB4, 0x1405312A8), 3);
-			utils::hook::set<uint8_t>(game::select(0x14224DF8C, 0x1405316DC), 3);
+			utils::hook::set<uint8_t>(0x14224DA53_g, 3);
+			utils::hook::set<uint8_t>(0x14224DBB4_g, 3);
+			utils::hook::set<uint8_t>(0x14224DF8C_g, 3);
 
 			// make sure reliableAck is not negative or too big
-			utils::hook::call(game::select(0x14225489C, 0x140537C4C), sv_execute_client_messages_stub);
+			utils::hook::call(0x14225489C_g, sv_execute_client_messages_stub);
 
 			lobby_min_players = game::register_dvar_int("lobby_min_players", 0, 0, 8, game::DVAR_NONE, "");
-			utils::hook::jump(game::select(0x141A7BCF0, 0x1402CB900), scr_get_num_expected_players, true);
+			utils::hook::jump(0x141A7BCF0_g, scr_get_num_expected_players, true);
 		}
 	};
 }

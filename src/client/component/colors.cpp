@@ -91,7 +91,7 @@ namespace colors
 		}*/
 	}
 
-	struct component final : client_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{

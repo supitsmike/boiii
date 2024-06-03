@@ -20,7 +20,7 @@ namespace dvars
 		{
 			for (int i = 0; i < *game::g_dvarCount; ++i)
 			{
-				const auto offset = game::is_server() ? 136 : 160;
+				const auto offset = 160;
 				const auto* dvar = reinterpret_cast<game::dvar_t*>(&game::s_dvarPool[offset * i]);
 
 				if (dvar->debugName //
@@ -37,7 +37,7 @@ namespace dvars
 		{
 			for (int i = 0; i < *game::g_dvarCount; ++i)
 			{
-				const auto offset = game::is_server() ? 136 : 160;
+				const auto offset = 160;
 				const auto* dvar = reinterpret_cast<game::dvar_t*>(&game::s_dvarPool[offset * i]);
 
 				if (dvar->debugName //
@@ -88,7 +88,7 @@ namespace dvars
 
 			for (int i = 0; i < *game::g_dvarCount; ++i)
 			{
-				const auto offset = game::is_server() ? 136 : 160;
+				const auto offset = 160;
 				auto* dvar = reinterpret_cast<game::dvar_t*>(&game::s_dvarPool[offset * i]);
 
 				if (!dvar->debugName)
@@ -187,31 +187,28 @@ namespace dvars
 		}
 	}
 
-	class component final : public generic_component
+	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override
 		{
-			if (!game::is_server())
-			{
-				scheduler::once(read_archive_dvars, scheduler::pipeline::dvars_flags_patched);
-				dvar_set_variant_hook.create(0x1422C9030_g, dvar_set_variant_stub);
+			scheduler::once(read_archive_dvars, scheduler::pipeline::dvars_flags_patched);
+			dvar_set_variant_hook.create(0x1422C9030_g, dvar_set_variant_stub);
 
-				// Show all known dvars in console
-				utils::hook::jump(0x1422BCE30_g, dvar_for_each_name_stub);
-				utils::hook::jump(0x1422BCD80_g, dvar_for_each_name_client_num_stub);
-			}
+			// Show all known dvars in console
+			utils::hook::jump(0x1422BCE30_g, dvar_for_each_name_stub);
+			utils::hook::jump(0x1422BCD80_g, dvar_for_each_name_client_num_stub);
 
 			scheduler::once(copy_dvar_names_to_pool, scheduler::pipeline::main);
 
 			// All dvars are recognized as command
-			utils::hook::nop(game::select(0x142151F1A, 0x14050949A), 2);
+			utils::hook::nop(0x142151F1A_g, 2);
 			// Show all dvars in dvarlist command
-			utils::hook::nop(game::select(0x142152227, 0x140509797), 6);
+			utils::hook::nop(0x142152227_g, 6);
 			// Show all dvars in dvardump command
-			utils::hook::nop(game::select(0x142151BF9, 0x140509179), 6);
+			utils::hook::nop(0x142151BF9_g, 6);
 			// Stops game from deleting debug names from archive dvars
-			utils::hook::set<uint8_t>(game::select(0x1422C5DE0, 0x1405786D0), 0xC3);
+			utils::hook::set<uint8_t>(0x1422C5DE0_g, 0xC3);
 		}
 	};
 }

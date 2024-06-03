@@ -220,12 +220,12 @@ namespace command
 		                                   allocator.allocate<game::cmd_function_s>());
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
 			// Disable whitelist
-			utils::hook::jump(game::select(0x1420EE860, 0x1404F9CD0), update_whitelist_stub);
+			utils::hook::jump(0x1420EE860_g, update_whitelist_stub);
 		}
 	};
 }

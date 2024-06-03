@@ -194,7 +194,7 @@ namespace client_patches
 		}
 	}
 
-	class component final : public client_component
+	class component final : public component_interface
 	{
 	public:
 		static_assert(offsetof(game::clientActive_t, viewangles) == 0xB8C8);

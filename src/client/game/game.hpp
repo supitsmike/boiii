@@ -12,11 +12,6 @@ namespace arxan::detail
 namespace game
 {
 	size_t get_base();
-	bool is_server();
-	bool is_client();
-	bool is_legacy_client();
-
-	bool is_headless();
 
 	void show_error(const std::string& text, const std::string& title = "Error");
 
@@ -41,16 +36,6 @@ namespace game
 		return derelocate(reinterpret_cast<size_t>(val));
 	}
 
-	inline size_t select(const size_t client_val, const size_t server_val)
-	{
-		return relocate(is_server() ? server_val : client_val);
-	}
-
-	inline size_t select(const void* client_val, const void* server_val)
-	{
-		return select(reinterpret_cast<size_t>(client_val), reinterpret_cast<size_t>(server_val));
-	}
-
 	template <typename T>
 	class base_symbol
 	{
@@ -60,15 +45,9 @@ namespace game
 		{
 		}
 
-		base_symbol(const size_t address, const size_t server_address)
-			: address_(address)
-			  , server_address_(server_address)
-		{
-		}
-
 		T* get() const
 		{
-			return reinterpret_cast<T*>(select(this->address_, this->server_address_));
+			return reinterpret_cast<T*>(game::relocate(this->address_));
 		}
 
 		operator T*() const
@@ -83,7 +62,6 @@ namespace game
 
 	private:
 		size_t address_{};
-		size_t server_address_{};
 	};
 
 	template <typename T>

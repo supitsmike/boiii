@@ -71,7 +71,7 @@ namespace arxan
 
 		uint64_t get_callstack_return_stub()
 		{
-			const auto placeholder = game::select(0x140001056, 0x140101168);
+			const auto placeholder = 0x140001056_g;
 			utils::hook::set<uint8_t>(placeholder - 2, 0xFF); // fakes a call
 			utils::hook::nop(placeholder, 1);
 			utils::hook::jump(placeholder + 1, utils::hook::assemble(callstack_return_stub));
@@ -687,29 +687,14 @@ namespace arxan
 
 		void search_and_patch_integrity_checks_precomputed()
 		{
-			if (game::is_server())
+			for (const auto i : intact_integrity_check_blocks)
 			{
-				for (const auto i : intact_integrity_check_blocks_server)
-				{
-					patch_intact_basic_block_integrity_check(reinterpret_cast<void*>(game::relocate(i)));
-				}
-
-				for (const auto i : split_integrity_check_blocks_server)
-				{
-					patch_split_basic_block_integrity_check(reinterpret_cast<void*>(game::relocate(i)));
-				}
+				patch_intact_basic_block_integrity_check(reinterpret_cast<void*>(game::relocate(i)));
 			}
-			else
-			{
-				for (const auto i : intact_integrity_check_blocks)
-				{
-					patch_intact_basic_block_integrity_check(reinterpret_cast<void*>(game::relocate(i)));
-				}
 
-				for (const auto i : split_integrity_check_blocks)
-				{
-					patch_split_basic_block_integrity_check(reinterpret_cast<void*>(game::relocate(i)));
-				}
+			for (const auto i : split_integrity_check_blocks)
+			{
+				patch_split_basic_block_integrity_check(reinterpret_cast<void*>(game::relocate(i)));
 			}
 		}
 
@@ -810,7 +795,7 @@ namespace arxan
 		return zw_terminate_process_hook.invoke<NTSTATUS>(process_handle, exit_status);
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_load() override
 		{

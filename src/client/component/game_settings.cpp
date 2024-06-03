@@ -77,11 +77,11 @@ namespace gamesettings
 			a.jnz(exec_from_fastfile);
 
 			a.bind(exec_from_disk);
-			a.jmp(game::select(0x1420ED087, 0x1404F855E));
+			a.jmp(0x1420ED087_g);
 
 			a.bind(exec_from_fastfile);
-			a.lea(rdx, ptr(rsp, (game::is_server() ? 0x30 : 0x40)));
-			a.jmp(game::select(0x1420ED007, 0x1404F853F));
+			a.lea(rdx, ptr(rsp, 0x40));
+			a.jmp(0x1420ED007_g);
 		}
 
 		int read_file_stub(const char* qpath, void** buffer)
@@ -106,7 +106,7 @@ namespace gamesettings
 				return len;
 			}
 
-			return utils::hook::invoke<int>(game::select(0x1422A48D0, 0x140564F70), qpath, buffer);
+			return utils::hook::invoke<int>(0x1422A48D0_g, qpath, buffer);
 		}
 
 		void search_gamesettings_files_on_disk()
@@ -118,14 +118,14 @@ namespace gamesettings
 		}
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{
 			search_gamesettings_files_on_disk();
 
-			utils::hook::call(game::select(0x1420ED0A1, 0x1404F857D), read_file_stub);
-			utils::hook::jump(game::select(0x1420ED002, 0x1404F853A), utils::hook::assemble(cmd_exec_stub));
+			utils::hook::call(0x1420ED0A1_g, read_file_stub);
+			utils::hook::jump(0x1420ED002_g, utils::hook::assemble(cmd_exec_stub));
 		}
 	};
 };
