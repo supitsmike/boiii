@@ -9,7 +9,6 @@
 #include <utils/string.hpp>
 
 #include "command.hpp"
-#include "client_command.hpp"
 
 namespace chat
 {
@@ -106,7 +105,7 @@ namespace chat
 		return "Unknown Soldier";
 	}
 
-	class component final : public generic_component
+	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override

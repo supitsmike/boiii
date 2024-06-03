@@ -58,7 +58,7 @@ namespace game_event
 		});
 	}
 
-	class component final : public generic_component
+	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override

@@ -115,7 +115,7 @@ namespace bots
 		}
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		static_assert(offsetof(game::client_s, bIsTestClient) == 0xBB360);
 

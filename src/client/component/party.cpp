@@ -336,7 +336,7 @@ namespace party
 		return get_connected_server() == addr || connect_host == addr;
 	}
 
-	struct component final : client_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{

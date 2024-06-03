@@ -149,7 +149,7 @@ namespace scheduler
 		}, type, delay);
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_load() override
 		{

@@ -237,7 +237,7 @@ namespace profile_infos
 		utils::io::write_file("boiii_players/user/profile_info", data);
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_unpack() override
 		{

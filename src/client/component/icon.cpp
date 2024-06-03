@@ -29,7 +29,7 @@ namespace icon
 		}
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_load() override
 		{

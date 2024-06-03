@@ -9,9 +9,9 @@ namespace component_loader
 {
 	namespace
 	{
-		std::vector<std::unique_ptr<generic_component>>& get_components()
+		std::vector<std::unique_ptr<component_interface>>& get_components()
 		{
-			using component_vector = std::vector<std::unique_ptr<generic_component>>;
+			using component_vector = std::vector<std::unique_ptr<component_interface>>;
 			using component_vector_container = std::unique_ptr<component_vector, std::function<void(component_vector*)>>
 				;
 
@@ -25,47 +25,44 @@ namespace component_loader
 			return *components;
 		}
 
-		std::vector<std::pair<registration_functor, component_type>>& get_registration_functors()
+		std::vector<registration_functor>& get_registration_functors()
 		{
-			static std::vector<std::pair<registration_functor, component_type>> functors;
+			static std::vector<registration_functor> functors;
 			return functors;
 		}
 
-		void activate_component(std::unique_ptr<generic_component> component)
+		void activate_component(std::unique_ptr<component_interface> component)
 		{
 			auto& components = get_components();
 			components.push_back(std::move(component));
 
-			std::ranges::stable_sort(components, [](const std::unique_ptr<generic_component>& a,
-			                                        const std::unique_ptr<generic_component>& b)
+			std::ranges::stable_sort(components, [](const std::unique_ptr<component_interface>& a,
+			                                        const std::unique_ptr<component_interface>& b)
 			{
 				return a->priority() > b->priority();
 			});
 		}
 	}
 
-	void register_component(registration_functor functor, component_type type)
+	void register_component(registration_functor functor)
 	{
 		if (!get_components().empty())
 		{
 			throw std::runtime_error("Registration is too late");
 		}
 
-		get_registration_functors().emplace_back(std::move(functor), type);
+		get_registration_functors().emplace_back(std::move(functor));
 	}
 
-	bool activate(bool server)
+	bool activate()
 	{
-		static auto res = [server]
+		static auto res = []
 		{
 			try
 			{
 				for (auto& functor : get_registration_functors())
 				{
-					if (functor.second == component_type::any || server == (functor.second == component_type::server))
-					{
-						activate_component(functor.first());
-					}
+					activate_component(functor());
 				}
 			}
 			catch (premature_shutdown_trigger&)

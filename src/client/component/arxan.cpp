@@ -795,7 +795,7 @@ namespace arxan
 		return zw_terminate_process_hook.invoke<NTSTATUS>(process_handle, exit_status);
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		void post_load() override
 		{

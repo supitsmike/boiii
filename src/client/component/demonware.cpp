@@ -443,7 +443,7 @@ namespace demonware
 		}
 	}
 
-	struct component final : generic_component
+	struct component final : component_interface
 	{
 		component()
 		{

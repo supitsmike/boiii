@@ -243,14 +243,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 				validate_non_network_share();
 				remove_crash_file();
 
-				const auto is_server = utils::flags::has_flag("dedicated");
+				trigger_high_performance_gpu_switch();
 
-				if (!is_server)
-				{
-					trigger_high_performance_gpu_switch();
-				}
-
-				if (!component_loader::activate(is_server))
+				if (!component_loader::activate())
 				{
 					return 1;
 				}
