@@ -40,11 +40,6 @@ namespace dedicated
 
 	void send_heartbeat()
 	{
-		if (!game::is_server())
-		{
-			return;
-		}
-
 		scheduler::once(send_heartbeat_packet, scheduler::pipeline::main, 5s);
 	}
 

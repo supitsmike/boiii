@@ -63,8 +63,8 @@ namespace game_event
 	public:
 		void post_unpack() override
 		{
-			utils::hook::call(game::select(0x1419DD6EC, 0x1402ABC1B), rope_init_ropes_stub);
-			utils::hook::call(game::select(0x141A02AAD, 0x1402ADF1D), mantle_shutdown_anims_stub);
+			utils::hook::call(0x1419DD6EC_g, rope_init_ropes_stub);
+			utils::hook::call(0x141A02AAD_g, mantle_shutdown_anims_stub);
 		}
 	};
 }

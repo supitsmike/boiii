@@ -224,8 +224,7 @@ namespace auth
 			std::string challenge{};
 			challenge.resize(32);
 
-			const auto get_challenge = reinterpret_cast<void(*)(const game::netadr_t*, void*, size_t)>(game::select(
-				0x1412E15E0, 0x14016DDC0));
+			const auto get_challenge = reinterpret_cast<void(*)(const game::netadr_t*, void*, size_t)>(0x1412E15E0_g);
 			get_challenge(&target, challenge.data(), challenge.size());
 
 			if (!utils::cryptography::ecc::verify_message(key, challenge, buffer.read_string()) && target.type !=
@@ -309,7 +308,7 @@ namespace auth
 	{
 		static const auto guid = []() -> uint64_t
 		{
-			if (game::is_server() || is_second_instance())
+			if (is_second_instance())
 			{
 				return 0x110000100000000 | (::utils::cryptography::random::get_integer() & ~0x80000000);
 			}
@@ -375,12 +374,12 @@ namespace auth
 		void post_unpack() override
 		{
 			// Skip connect handler
-			utils::hook::set<uint8_t>(game::select(0x142253EFA, 0x14053714A), 0xEB);
+			utils::hook::set<uint8_t>(0x142253EFA_g, 0xEB);
 			network::on("connect", handle_connect_packet_fragment);
 			network::on("playerXuid", handle_player_xuid_packet);
 
 			// Intercept SV_DirectConnect in SV_AddTestClient
-			utils::hook::call(game::select(0x1422490DC, 0x14052E582), direct_connect_bots_stub);
+			utils::hook::call(0x1422490DC_g, direct_connect_bots_stub);
 
 			scheduler::once([]
 			{
@@ -394,51 +393,34 @@ namespace auth
 				patches.emplace_back(a, b);
 			};
 
-			if (game::is_server())
-			{
-				p(0x1404747C6_g, 0x140474806_g);
-				p(0x140474A24_g, 0x140474A68_g);
-				p(0x140474A85_g, 0x140474AC6_g);
-				p(0x140457ED0_g, 0x140457F26_g);
-				p(0x140473DD8_g, 0x140473E19_g);
-				p(0x1404743D5_g, 0x140474423_g);
-				p(0x1404744FD_g, 0x140474553_g);
-				p(0x14047462D_g, 0x140474677_g);
-				p(0x140475057_g, 0x14047509F_g); // ?
-				p(0x140475672_g, 0x1404756B5_g);
-				p(0x140477322_g, 0x140477365_g); // ?
-			}
-			else
-			{
-				p(0x141E19CED_g, 0x141E19D3B_g);
-				p(0x141EB2C76_g, 0x141EB2CB6_g);
-				p(0x141EB2DAD_g, 0x141EB2DF2_g);
-				p(0x141EB3C35_g, 0x141EB3C76_g);
-				p(0x141E19AD0_g, 0x141E19B26_g);
-				//
-				p(0x141EB0EE8_g, 0x141EB0F29_g);
-				p(0x141EB0FA8_g, 0x141EB0FE9_g);
-				p(0x141EB2525_g, 0x141EB2573_g);
-				p(0x141EB264D_g, 0x141EB26A3_g);
-				p(0x141EB277D_g, 0x141EB27C7_g);
+			p(0x141E19CED_g, 0x141E19D3B_g);
+			p(0x141EB2C76_g, 0x141EB2CB6_g);
+			p(0x141EB2DAD_g, 0x141EB2DF2_g);
+			p(0x141EB3C35_g, 0x141EB3C76_g);
+			p(0x141E19AD0_g, 0x141E19B26_g);
+			//
+			p(0x141EB0EE8_g, 0x141EB0F29_g);
+			p(0x141EB0FA8_g, 0x141EB0FE9_g);
+			p(0x141EB2525_g, 0x141EB2573_g);
+			p(0x141EB264D_g, 0x141EB26A3_g);
+			p(0x141EB277D_g, 0x141EB27C7_g);
 
-				p(0x141EB2AEA_g, 0x141EB2AFA_g);
-				p(0x141EB2B01_g, 0x141EB2B33_g);
+			p(0x141EB2AEA_g, 0x141EB2AFA_g);
+			p(0x141EB2B01_g, 0x141EB2B33_g);
 
-				p(0x141EB3137_g, 0x141EB3147_g);
-				p(0x141EB314E_g, 0x141EB317F_g);
+			p(0x141EB3137_g, 0x141EB3147_g);
+			p(0x141EB314E_g, 0x141EB317F_g);
 
-				p(0x141EB5377_g, 0x141EB53BF_g); // ?
-				p(0x141EB5992_g, 0x141EB59D5_g);
-				p(0x141EB74D2_g, 0x141EB7515_g); // ?
+			p(0x141EB5377_g, 0x141EB53BF_g); // ?
+			p(0x141EB5992_g, 0x141EB59D5_g);
+			p(0x141EB74D2_g, 0x141EB7515_g); // ?
 
-				utils::hook::call(0x14134BF7D_g, send_connect_data_stub);
+			utils::hook::call(0x14134BF7D_g, send_connect_data_stub);
 
-				utils::hook::call(0x14134BEFE_g, info_set_value_for_key_stub);
+			utils::hook::call(0x14134BEFE_g, info_set_value_for_key_stub);
 
-				// Fix crash
-				utils::hook::set<uint8_t>(0x14134B970_g, 0xC3);
-			}
+			// Fix crash
+			utils::hook::set<uint8_t>(0x14134B970_g, 0xC3);
 
 			for (const auto& patch : patches)
 			{

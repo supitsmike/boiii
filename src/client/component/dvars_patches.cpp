@@ -13,19 +13,16 @@ namespace dvars_patches
 	{
 		void patch_dvars()
 		{
-			(void)game::register_sessionmode_dvar_bool("com_pauseSupported", !game::is_server(), game::DVAR_SERVERINFO, "Whether is pause is ever supported by the game mode");
+			(void)game::register_sessionmode_dvar_bool("com_pauseSupported", true, game::DVAR_SERVERINFO, "Whether is pause is ever supported by the game mode");
 		}
 
 		void patch_flags()
 		{
-			if (game::is_client())
-			{
-				game::dvar_set_flags("r_dof_enable", game::DVAR_ARCHIVE);
-				game::dvar_set_flags("r_lodbiasrigid", game::DVAR_ARCHIVE);
-				game::dvar_set_flags("gpad_stick_deadzone_max", game::DVAR_ARCHIVE);
-				game::dvar_set_flags("gpad_stick_deadzone_min", game::DVAR_ARCHIVE);
-				game::dvar_set_flags("cg_drawLagometer", game::DVAR_ARCHIVE);
-			}
+			game::dvar_set_flags("r_dof_enable", game::DVAR_ARCHIVE);
+			game::dvar_set_flags("r_lodbiasrigid", game::DVAR_ARCHIVE);
+			game::dvar_set_flags("gpad_stick_deadzone_max", game::DVAR_ARCHIVE);
+			game::dvar_set_flags("gpad_stick_deadzone_min", game::DVAR_ARCHIVE);
+			game::dvar_set_flags("cg_drawLagometer", game::DVAR_ARCHIVE);
 
 			scheduler::execute(scheduler::pipeline::dvars_flags_patched);
 		}
@@ -58,11 +55,6 @@ namespace dvars_patches
 		{
 			scheduler::once(patch_dvars, scheduler::pipeline::main);
 			scheduler::once(patch_flags, scheduler::pipeline::main);
-
-			if (game::is_server())
-			{
-				return;
-			}
 
 			// toggle ADS dof based on r_dof_enable
 			utils::hook::jump(0x141116EBB_g, utils::hook::assemble(dof_enabled_stub));

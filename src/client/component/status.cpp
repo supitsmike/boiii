@@ -33,12 +33,12 @@ namespace status
 		void post_unpack() override
 		{
 			// Patch the status command for test clients
-			utils::hook::call(game::select(0x142246E37, 0x14052C527), print_client_num);
-			utils::hook::call(game::select(0x142246EDE, 0x14052C5CE), print_client_xuid);
+			utils::hook::call(0x142246E37_g, print_client_num);
+			utils::hook::call(0x142246EDE_g, print_client_xuid);
 
-			utils::hook::copy_string(game::select(0x143050480, 0x140E85A20),
+			utils::hook::copy_string(0x143050480_g,
 			                         "num score ping xuid             name             address                  qport  \n");
-			utils::hook::copy_string(game::select(0x1430504E0, 0x140E85A80),
+			utils::hook::copy_string(0x1430504E0_g,
 			                         "--- ----- ---- ---------------- ---------------- ------------------------ ------ \n");
 		}
 	};

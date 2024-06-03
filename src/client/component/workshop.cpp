@@ -89,7 +89,7 @@ namespace workshop
 
 		void load_usermap_content_stub(void* usermaps_count, int type)
 		{
-			utils::hook::invoke<void>(game::select(0x1420D6430, 0x1404E2360), usermaps_count, type);
+			utils::hook::invoke<void>(0x1420D6430_g, usermaps_count, type);
 
 			for (unsigned int i = 0; i < *game::usermapsCount; ++i)
 			{
@@ -107,7 +107,7 @@ namespace workshop
 
 		void load_mod_content_stub(void* mods_count, int type)
 		{
-			utils::hook::invoke<void>(game::select(0x1420D6430, 0x1404E2360), mods_count, type);
+			utils::hook::invoke<void>(0x1420D6430_g, mods_count, type);
 
 			for (unsigned int i = 0; i < *game::modsCount; ++i)
 			{
@@ -296,17 +296,11 @@ namespace workshop
 				game::reloadUserContent();
 			});
 
-			utils::hook::call(game::select(0x1420D6AA6, 0x1404E2936), va_mods_path_stub);
-			utils::hook::call(game::select(0x1420D6577, 0x1404E24A7), va_user_content_path_stub);
+			utils::hook::call(0x1420D6AA6_g, va_mods_path_stub);
+			utils::hook::call(0x1420D6577_g, va_user_content_path_stub);
 
-			load_usermap_hook.create(game::select(0x1420D5700, 0x1404E18B0), load_usermap_stub);
-			utils::hook::call(game::select(0x1420D67F5, 0x1404E25F2), load_usermap_content_stub);
-
-			if (game::is_server())
-			{
-				utils::hook::jump(0x1404E2635_g, load_mod_content_stub);
-				return;
-			}
+			load_usermap_hook.create(0x1420D5700_g, load_usermap_stub);
+			utils::hook::call(0x1420D67F5_g, load_usermap_content_stub);
 
 			utils::hook::call(0x1420D6745_g, load_mod_content_stub);
 			utils::hook::call(0x14135CD84_g, has_workshop_item_stub);

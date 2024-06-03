@@ -32,28 +32,10 @@ namespace game
 		return base;
 	}
 
-	bool is_server()
-	{
-		static const auto server = get_host_library().get_optional_header()->CheckSum == 0x14C28B4;
-		return server;
-	}
-
-	bool is_client()
-	{
-		static const auto server = get_host_library().get_optional_header()->CheckSum == 0x888C368;
-		return server;
-	}
-
-	bool is_legacy_client()
-	{
-		static const auto server = get_host_library().get_optional_header()->CheckSum == 0x8880704;
-		return server;
-	}
-
 	void show_error(const std::string& text, const std::string& title)
 	{
-			MessageBoxA(nullptr, text.data(), title.data(), MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST);
-		}
+		MessageBoxA(nullptr, text.data(), title.data(), MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST);
+	}
 
 	std::filesystem::path get_appdata_path()
 	{

@@ -214,14 +214,7 @@ namespace game
 
 	void foreach_client(const std::function<void(client_s&, size_t index)>& callback)
 	{
-		if (is_server())
-		{
-			foreach_client(*svs_clients, callback);
-		}
-		else
-		{
-			foreach_client(*svs_clients_cl, callback);
-		}
+		foreach_client(*svs_clients, callback);
 	}
 
 	void foreach_client(const std::function<void(client_s&)>& callback)
@@ -253,11 +246,6 @@ namespace game
 
 	bool access_connected_client(const size_t index, const std::function<void(client_s&)>& callback)
 	{
-		if (is_server())
-		{
-			return access_client(*svs_clients, index, callback);
-		}
-
-		return access_client(*svs_clients_cl, index, callback);
+		return access_client(*svs_clients, index, callback);
 	}
 }

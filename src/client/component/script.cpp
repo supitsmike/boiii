@@ -207,20 +207,19 @@ namespace script
 		void post_unpack() override
 		{
 			// Return custom or overrided scripts if found
-			db_find_x_asset_header_hook.create(game::select(0x141420ED0, 0x1401D5FB0), db_find_x_asset_header_stub);
+			db_find_x_asset_header_hook.create(0x141420ED0_g, db_find_x_asset_header_stub);
 
 			// Free our scripts when the game ends
 			game_event::on_g_shutdown_game(clear_script_memory);
 
 			// Load our custom/overriding scripts
-			utils::hook::call(game::select(0x141AAE92F, 0x1402D81FF), begin_load_scripts_stub);
+			utils::hook::call(0x141AAE92F_g, begin_load_scripts_stub);
 
 			// Force GSC checksums to be valid
-			utils::hook::call(game::select(0x1408F2E5D, 0x1400E2D22), server_script_checksum_stub);
+			utils::hook::call(0x1408F2E5D_g, server_script_checksum_stub);
 
 			// Workaround for "Out of X" gobblegum
-			gscr_get_bgb_remaining_hook.create(game::select(0x141A8CAB0, 0x1402D2310),
-			                                   scr_loot_get_item_quantity_stub);
+			gscr_get_bgb_remaining_hook.create(0x141A8CAB0_g, scr_loot_get_item_quantity_stub);
 		}
 	};
 };

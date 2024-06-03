@@ -1664,25 +1664,16 @@ namespace game
 		bool bIsTestClient;
 		char __pad5[3];
 		int serverId;
-		char __pad6[171432];
+		char __pad6[171528];
 	};
 
 #ifdef __cplusplus
-	static_assert(sizeof(client_s) == 0xE5110);
+	static_assert(sizeof(client_s) == 0xE5170);
 
 	static_assert(offsetof(game::client_s, address) == 0x2C);
 	static_assert(offsetof(game::client_s, xuid) == 0x55C8);
 	static_assert(offsetof(game::client_s, guid) == 0xBB354);
 	static_assert(offsetof(game::client_s, bIsTestClient) == 0xBB360);
-#endif
-
-	struct client_s_cl : client_s
-	{
-		char __pad1_0[0x60];
-	};
-
-#ifdef __cplusplus
-	static_assert(sizeof(client_s_cl) == 0xE5170);
 #endif
 
 	union Weapon

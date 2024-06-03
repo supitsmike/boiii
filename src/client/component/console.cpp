@@ -58,7 +58,7 @@ namespace console
 			{
 				a.push(rbx);
 				a.mov(eax, 0x8030);
-				a.jmp(game::select(0x142332AA7, 0x140597527));
+				a.jmp(0x142332AA7_g);
 			});
 
 			static_cast<void(*)(const char*)>(print_func)(message);
@@ -109,13 +109,13 @@ namespace console
 				game::Cbuf_AddText(0, "quit\n");
 				[[fallthrough]];
 			default:
-				return utils::hook::invoke<LRESULT>(game::select(0x142332960, 0x1405973E0), hwnd, msg, wparam, lparam);
+				return utils::hook::invoke<LRESULT>(0x142332960_g, hwnd, msg, wparam, lparam);
 			}
 		}
 
 		LRESULT input_line_wnd_proc(const HWND hwnd, const UINT msg, const WPARAM wparam, const LPARAM lparam)
 		{
-			return utils::hook::invoke<LRESULT>(game::select(0x142332C60, 0x1405976E0), hwnd, msg, wparam, lparam);
+			return utils::hook::invoke<LRESULT>(0x142332C60_g, hwnd, msg, wparam, lparam);
 		}
 
 		void sys_create_console_stub(const HINSTANCE h_instance)
@@ -123,7 +123,7 @@ namespace console
 			char text[CONSOLE_BUFFER_SIZE]{0};
 
 			const auto* class_name = "BOIII WinConsole";
-			const auto* window_name = game::is_server() ? "BOIII Server" : "BOIII Console";
+			const auto* window_name = "BOIII Console";
 
 			WNDCLASSA wnd_class{};
 			wnd_class.style = 0;
@@ -227,21 +227,18 @@ namespace console
 	{
 		void post_unpack() override
 		{
-			if (!game::is_server())
-			{
-				utils::hook::set<uint8_t>(0x14133D2FE_g, 0xEB); // Always enable ingame console
-				utils::hook::jump(0x141344E44_g, 0x141344E2E_g); // Remove the need to type '\' or '/' to send a console command
+			utils::hook::set<uint8_t>(0x14133D2FE_g, 0xEB); // Always enable ingame console
+			utils::hook::jump(0x141344E44_g, 0x141344E2E_g); // Remove the need to type '\' or '/' to send a console command
 
-				if (utils::nt::is_wine() && !utils::flags::has_flag("console"))
-				{
-					return;
-				}
+			if (utils::nt::is_wine() && !utils::flags::has_flag("console"))
+			{
+				return;
 			}
 
 			utils::hook::jump(printf, print_stub);
 
-			utils::hook::jump(game::select(0x142332C30, 0x1405976B0), queue_message);
-			utils::hook::nop(game::select(0x142332C4A, 0x1405976CA), 2); // Print from every thread
+			utils::hook::jump(0x142332C30_g, queue_message);
+			utils::hook::nop(0x142332C4A_g, 2); // Print from every thread
 
 			//const auto self = utils::nt::library::get_by_address(sys_create_console_stub);
 			//logo = LoadImageA(self.get_handle(), MAKEINTRESOURCEA(IMAGE_LOGO), 0, 0, 0, LR_COPYFROMRESOURCE);
@@ -279,7 +276,7 @@ namespace console
 			{
 				{
 					static utils::hook::detour sys_create_console_hook;
-					sys_create_console_hook.create(game::select(0x142332E00, 0x140597880), sys_create_console_stub);
+					sys_create_console_hook.create(0x142332E00_g, sys_create_console_stub);
 
 					game::Sys_ShowConsole();
 					started = true;
