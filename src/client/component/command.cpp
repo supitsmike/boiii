@@ -7,7 +7,6 @@
 #include <utils/memory.hpp>
 
 #include <game/game.hpp>
-#include <steam/steam.hpp>
 
 namespace command
 {

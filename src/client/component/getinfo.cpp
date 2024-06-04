@@ -2,7 +2,6 @@
 #include "loader/component_loader.hpp"
 
 #include "game/game.hpp"
-#include "steam/steam.hpp"
 
 #include "network.hpp"
 #include "workshop.hpp"
@@ -81,36 +80,6 @@ namespace getinfo
 		void post_unpack() override
 		{
 			//utils::hook::jump(game::select(0x142254EF0, 0x140537730), get_assigned_team);
-
-			network::on("getInfo", [](const game::netadr_t& target, const network::data_view& data)
-			{
-				utils::info_string info{};
-				info.set("challenge", std::string{ data.begin(), data.end() });
-				info.set("gamename", "T7");
-				info.set("hostname",
-				         game::get_dvar_string("sv_hostname"));
-				info.set("gametype", game::get_dvar_string("g_gametype"));
-				//info.set("sv_motd", get_dvar_string("sv_motd"));
-				info.set("description", "");
-				info.set("xuid", utils::string::va("%llX", steam::SteamUser()->GetSteamID().bits));
-				info.set("mapname", game::get_dvar_string("mapname"));
-				info.set("isPrivate", game::get_dvar_string("g_password").empty() ? "0" : "1");
-				info.set("clients", std::to_string(get_client_count()));
-				info.set("bots", std::to_string(get_bot_count()));
-				info.set("sv_maxclients", std::to_string(get_max_client_count()));
-				info.set("protocol", std::to_string(PROTOCOL));
-				info.set("sub_protocol", std::to_string(SUB_PROTOCOL));
-				info.set("playmode", std::to_string(game::Com_SessionMode_GetMode()));
-				info.set("gamemode", std::to_string(game::Com_SessionMode_GetGameMode()));
-				info.set("sv_running", std::to_string(game::is_server_running()));
-				info.set("dedicated", "0");
-				info.set("hc", std::to_string(game::Com_GametypeSettings_GetUInt("hardcoremode", false)));
-				info.set("modName", workshop::get_mod_resized_name());
-				info.set("modId", workshop::get_mod_publisher_id());
-				info.set("rounds_played", std::to_string(*game::level_rounds_played));
-
-				network::send(target, "infoResponse", info.build(), '\n');
-			});
 		}
 	};
 }
