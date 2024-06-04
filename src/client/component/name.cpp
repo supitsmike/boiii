@@ -2,7 +2,6 @@
 #include "loader/component_loader.hpp"
 
 #include "name.hpp"
-#include "steam_proxy.hpp"
 #include "command.hpp"
 
 #include <utils/nt.hpp>
@@ -37,13 +36,7 @@ namespace name
 
 		void setup_player_name()
 		{
-			std::string initial_name = steam_proxy::get_player_name();
-
-			if (initial_name.empty())
-			{
-				initial_name = utils::nt::get_user_name();
-			}
-
+			std::string initial_name = utils::nt::get_user_name();
 			if (initial_name.empty())
 			{
 				initial_name = "Unknown Soldier";
