@@ -89,6 +89,8 @@ namespace game
 
 	WEAK symbol<qboolean(void* ent)> StuckInClient{0x1415A8360};
 
+	WEAK symbol<qboolean(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)> InputLineWndProc{ 0x142332C60 };
+
 	// Live
 	WEAK symbol<bool(uint64_t, int*, bool)> Live_GetConnectivityInformation{0x141E0C380};
 
