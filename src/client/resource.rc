@@ -44,9 +44,8 @@ END
 // Binary Data
 //
 
-ID_ICON               ICON   "resources/icon.ico"
 IMAGE_SPLASH          RCDATA "resources/splash.jpg"
-IMAGE_LOGO            RCDATA "resources/logo.jpg"
+IMAGE_LOGO            RCDATA "resources/codlogo.jpg"
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
