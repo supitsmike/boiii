@@ -35,13 +35,13 @@ namespace branding
 	{
 		void post_unpack() override
 		{
-			scheduler::loop(draw_branding, scheduler::renderer);
+			//scheduler::loop(draw_branding, scheduler::renderer);
 
 			// Change window title prefix
-			utils::hook::copy_string(0x14303F3D8_g, "BOIII");
+			//utils::hook::copy_string(0x14303F3D8_g, "BOIII");
 
 			// Change ingame console prefix
-			utils::hook::call(0x141339970_g, get_ingame_console_prefix_stub);
+			//utils::hook::call(0x141339970_g, get_ingame_console_prefix_stub);
 		}
 	};
 }

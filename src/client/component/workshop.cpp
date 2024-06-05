@@ -309,4 +309,4 @@ namespace workshop
 	};
 }
 
-REGISTER_COMPONENT(workshop::component)
+// REGISTER_COMPONENT(workshop::component)

@@ -42,4 +42,4 @@ namespace fov
 	};
 }
 
-REGISTER_COMPONENT(fov::component)
+// REGISTER_COMPONENT(fov::component)

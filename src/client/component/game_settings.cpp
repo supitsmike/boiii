@@ -130,4 +130,4 @@ namespace gamesettings
 	};
 };
 
-REGISTER_COMPONENT(gamesettings::component)
+// REGISTER_COMPONENT(gamesettings::component)

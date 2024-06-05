@@ -69,4 +69,4 @@ namespace game_event
 	};
 }
 
-REGISTER_COMPONENT(game_event::component)
+// REGISTER_COMPONENT(game_event::component)

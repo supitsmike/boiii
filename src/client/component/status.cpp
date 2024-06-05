@@ -44,4 +44,4 @@ namespace status
 	};
 }
 
-REGISTER_COMPONENT(status::component)
+// REGISTER_COMPONENT(status::component)

@@ -62,4 +62,4 @@ namespace dvars_patches
 	};
 }
 
-REGISTER_COMPONENT(dvars_patches::component)
+// REGISTER_COMPONENT(dvars_patches::component)

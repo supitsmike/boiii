@@ -113,13 +113,13 @@ namespace arxan
 		void** get_tls_callbacks()
 		{
 			const utils::nt::library game{};
-			const auto& entry = game.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
-			if (!entry.VirtualAddress || !entry.Size)
+			const auto& [VirtualAddress, Size] = game.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
+			if (!VirtualAddress || !Size)
 			{
 				return nullptr;
 			}
 
-			const auto* tls_dir = reinterpret_cast<IMAGE_TLS_DIRECTORY*>(game.get_ptr() + entry.VirtualAddress);
+			const auto* tls_dir = reinterpret_cast<IMAGE_TLS_DIRECTORY*>(game.get_ptr() + VirtualAddress);
 			return reinterpret_cast<void**>(tls_dir->AddressOfCallBacks);
 		}
 
@@ -136,8 +136,7 @@ namespace arxan
 
 		void restore_tls_callbacks()
 		{
-			auto* tls_callbacks = get_tls_callbacks();
-			if (tls_callbacks)
+			if (auto* tls_callbacks = get_tls_callbacks())
 			{
 				utils::hook::set(tls_callbacks, original_first_tls_callback);
 			}
@@ -228,7 +227,7 @@ namespace arxan
 
 		bool remove_evil_keywords_from_string(wchar_t* str, const size_t length)
 		{
-			UNICODE_STRING unicode_string{};
+			UNICODE_STRING unicode_string;
 			unicode_string.Buffer = str;
 			unicode_string.Length = static_cast<uint16_t>(length);
 			unicode_string.MaximumLength = unicode_string.Length;
@@ -306,7 +305,7 @@ namespace arxan
 		                                                  const PVOID info,
 		                                                  const ULONG info_length, const PULONG ret_length)
 		{
-			const NTSTATUS status = nt_query_information_process_hook.invoke<NTSTATUS>(
+			const auto status = nt_query_information_process_hook.invoke<NTSTATUS>(
 				handle, info_class, info, info_length, ret_length);
 			if (NT_SUCCESS(status))
 			{
@@ -336,7 +335,7 @@ namespace arxan
 		NTSTATUS NTAPI nt_close_stub(const HANDLE handle)
 		{
 			char info[16];
-			if (NtQueryObject(handle, OBJECT_INFORMATION_CLASS(4), &info, 2, nullptr) >= 0 && size_t(handle) != 0x12345)
+			if (NtQueryObject(handle, static_cast<OBJECT_INFORMATION_CLASS>(4), &info, 2, nullptr) >= 0 && reinterpret_cast<size_t>(handle) != 0x12345)
 			{
 				return nt_close_hook.invoke<NTSTATUS>(handle);
 			}
@@ -348,7 +347,7 @@ namespace arxan
 		{
 			auto* const peb = reinterpret_cast<PPEB>(__readgsqword(0x60));
 			peb->BeingDebugged = false;
-			*reinterpret_cast<PDWORD>(LPSTR(peb) + 0xBC) &= ~0x70;
+			*reinterpret_cast<PDWORD>(reinterpret_cast<LPSTR>(peb) + 0xBC) &= ~0x70;
 		}
 
 		void restore_debug_functions()
@@ -676,7 +675,7 @@ namespace arxan
 		constexpr auto debug_registers_flag = (CONTEXT_DEBUG_REGISTERS & ~CONTEXT_AMD64);
 		if (context->ContextFlags & debug_registers_flag)
 		{
-			auto* source = _ReturnAddress();
+			const auto* source = _ReturnAddress();
 			const auto game = utils::nt::library{};
 			const auto source_module = utils::nt::library::get_by_address(source);
 
@@ -770,7 +769,7 @@ namespace arxan
 			detail::callstack_proxy_addr = utils::hook::assemble(callstack_stub);
 		}
 
-		component_priority priority() const override
+		[[nodiscard]] component_priority priority() const override
 		{
 			return component_priority::arxan;
 		}

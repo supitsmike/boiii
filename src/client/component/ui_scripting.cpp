@@ -468,16 +468,16 @@ namespace ui_scripting
 	public:
 		void post_unpack() override
 		{
-			utils::hook::call(0x141D4979A_g, hks_load_stub);
+			//utils::hook::call(0x141D4979A_g, hks_load_stub);
 
-			hks_package_require_hook.create(0x141D28EF0_g, hks_package_require_stub);
-			ui_cod_init_hook.create(game::UI_CoD_Init, ui_cod_init_stub);
-			ui_cod_lobbyui_init_hook.create(game::UI_CoD_LobbyUI_Init, ui_cod_lobbyui_init_stub);
-			ui_shutdown_hook.create(0x14270DE00_g, ui_shutdown_stub);
-			lua_cod_getrawfile_hook.create(0x141F0EFE0_g, lua_cod_getrawfile_stub);
-
-			ui_init_hook.create(0x142704FF0_g, ui_init_stub);
-			cl_first_snapshot_hook.create(0x141320E60_g, cl_first_snapshot_stub);
+			//hks_package_require_hook.create(0x141D28EF0_g, hks_package_require_stub);
+			//ui_cod_init_hook.create(game::UI_CoD_Init, ui_cod_init_stub);
+			//ui_cod_lobbyui_init_hook.create(game::UI_CoD_LobbyUI_Init, ui_cod_lobbyui_init_stub);
+			//ui_shutdown_hook.create(0x14270DE00_g, ui_shutdown_stub);
+			//lua_cod_getrawfile_hook.create(0x141F0EFE0_g, lua_cod_getrawfile_stub);
+			//
+			//ui_init_hook.create(0x142704FF0_g, ui_init_stub);
+			//cl_first_snapshot_hook.create(0x141320E60_g, cl_first_snapshot_stub);
 
 			scheduler::once([]()
 			{

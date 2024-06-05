@@ -84,4 +84,4 @@ namespace getinfo
 	};
 }
 
-REGISTER_COMPONENT(getinfo::component)
+// REGISTER_COMPONENT(getinfo::component)

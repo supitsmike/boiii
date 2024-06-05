@@ -58,7 +58,7 @@ namespace splash
 			wnd_class.lpszMenuName = nullptr;
 			wnd_class.lpfnWndProc = DefWindowProcA;
 			wnd_class.hInstance = self;
-			wnd_class.hIcon = LoadIconA(self, MAKEINTRESOURCEA(ID_ICON));
+			//wnd_class.hIcon = LoadIconA(self, MAKEINTRESOURCEA(ID_ICON));
 			wnd_class.hCursor = LoadCursorA(nullptr, IDC_APPSTARTING);
 			wnd_class.hbrBackground = reinterpret_cast<HBRUSH>(6);
 			wnd_class.lpszClassName = "Black Ops III Splash Screen";

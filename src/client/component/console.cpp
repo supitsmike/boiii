@@ -122,8 +122,8 @@ namespace console
 		{
 			char text[CONSOLE_BUFFER_SIZE]{0};
 
-			const auto* class_name = "BOIII WinConsole";
-			const auto* window_name = "BOIII Console";
+			const auto* class_name = "CoD Black Ops III WinConsole";
+			const auto* window_name = "CoD Black Ops III Console";
 
 			WNDCLASSA wnd_class{};
 			wnd_class.style = 0;

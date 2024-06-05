@@ -16,159 +16,20 @@ namespace network
 {
 	namespace
 	{
-		utils::hook::detour handle_packet_internal_hook{};
+		utils::hook::detour HandlePacketInternal_hook{};
+		bool HandlePacketInternal_stub(game::ControllerIndex_t controllerIndex, game::netadr_t fromAdr,
+			game::XUID fromXuid, game::LobbyType lobbyType, uint64_t destModule,
+			game::msg_t* msg)
+		{
+			return HandlePacketInternal_hook.invoke<bool>(controllerIndex, fromAdr, fromXuid, lobbyType, destModule, msg)
+				? true
+				: false;
+		}
 
 		std::unordered_map<std::string, callback>& get_callbacks()
 		{
 			static std::unordered_map<std::string, callback> callbacks{};
 			return callbacks;
-		}
-
-		uint64_t handle_command(const game::netadr_t* address, const char* command, const game::msg_t* message)
-		{
-			const auto cmd_string = utils::string::to_lower(command);
-			auto& callbacks = get_callbacks();
-			const auto handler = callbacks.find(cmd_string);
-			const auto offset = cmd_string.size() + 5;
-			if (message->cursize < 0 || static_cast<size_t>(message->cursize) < offset || handler == callbacks.end())
-			{
-				return 1;
-			}
-
-			const std::basic_string_view data(message->data + offset, message->cursize - offset);
-
-			try
-			{
-				handler->second(*address, data);
-			}
-			catch (const std::exception& e)
-			{
-				printf("Error: %s\n", e.what());
-			}
-			catch (...)
-			{
-			}
-
-			return 0;
-		}
-
-		void handle_command_stub(utils::hook::assembler& a)
-		{
-			a.pushad64();
-
-			a.mov(rdx, rcx); // command
-			a.mov(r8, r12); // msg
-			a.mov(rcx, r15); // address
-
-			a.call_aligned(handle_command);
-
-			a.mov(qword_ptr(rsp, 0x78), rax);
-
-			a.popad64();
-
-			a.ret();
-		}
-
-		bool socket_set_blocking(const SOCKET s, const bool blocking)
-		{
-			unsigned long mode = blocking ? 0 : 1;
-			return ioctlsocket(s, FIONBIO, &mode) == 0;
-		}
-
-		void create_ip_socket()
-		{
-			auto& s = *game::ip_socket;
-			if (s)
-			{
-				return;
-			}
-
-			s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-			if (s == INVALID_SOCKET)
-			{
-				throw std::runtime_error("Unable to create socket");
-			}
-
-			constexpr char broadcast = 1;
-			setsockopt(s, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
-
-			socket_set_blocking(s, false);
-
-			const auto address = htonl(INADDR_ANY);
-			auto port = static_cast<uint16_t>(game::Dvar_FindVar("net_port")->current.value.integer);
-
-			sockaddr_in server_addr{};
-			server_addr.sin_family = AF_INET;
-			server_addr.sin_addr.s_addr = address;
-
-			int retries = 0;
-			do
-			{
-				server_addr.sin_port = htons(port++);
-				if (++retries > 10) return;
-			}
-			while (bind(s, reinterpret_cast<sockaddr*>(&server_addr), sizeof(server_addr)) ==
-				SOCKET_ERROR);
-		}
-
-		bool& socket_byte_missing()
-		{
-			static thread_local bool was_missing{false};
-			return was_missing;
-		}
-
-		uint8_t read_socket_byte_stub(game::msg_t* msg)
-		{
-			auto& byte_missing = socket_byte_missing();
-			byte_missing = msg->cursize >= 4 && *reinterpret_cast<int*>(msg->data) == -1;
-			if (byte_missing)
-			{
-				return game::NS_SERVER | (game::NS_SERVER << 4);
-			}
-
-			const auto _ = utils::finally([msg]
-			{
-				++msg->data;
-			});
-
-			return game::MSG_ReadByte(msg);
-		}
-
-		int verify_checksum_stub(void* /*data*/, const int length)
-		{
-			return length + (socket_byte_missing() ? 1 : 0);
-		}
-
-		void con_restricted_execute_buf_stub(int local_client_num, game::ControllerIndex_t controller_index,
-		                                     const char* buffer)
-		{
-			game::Cbuf_ExecuteBuffer(local_client_num, controller_index, buffer);
-		}
-
-		uint64_t handle_packet_internal_stub(const game::ControllerIndex_t controller_index,
-		                                     const game::netadr_t from_adr, const game::XUID from_xuid,
-		                                     const game::LobbyType lobby_type, const uint64_t dest_module,
-		                                     game::msg_t* msg)
-		{
-			if (from_adr.type != game::NA_LOOPBACK)
-			{
-				return 0;
-			}
-
-			return handle_packet_internal_hook.invoke<bool>(controller_index, from_adr, from_xuid, lobby_type,
-			                                                dest_module, msg)
-				       ? 1
-				       : 0;
-		}
-
-		uint64_t ret2()
-		{
-			return 2;
-		}
-
-		int bind_stub(SOCKET /*s*/, const sockaddr* /*addr*/, int /*namelen*/)
-		{
-			return 0;
 		}
 
 		void com_error_oob_stub(const char* file, int line, int code, [[maybe_unused]] const char* fmt, const char* error)
@@ -300,55 +161,10 @@ namespace network
 	{
 		void post_unpack() override
 		{
-			scheduler::loop(game::fragment_handler::clean, scheduler::async, 5s);
-
-			// don't increment data pointer to optionally skip socket byte
-			utils::hook::nop(0x1423322B6_g, 4);
-
-			// optionally read socket byte
-			utils::hook::call(0x142332283_g, read_socket_byte_stub);
-
-			// skip checksum verification
-			utils::hook::call(0x1423322C1_g, verify_checksum_stub);
-
-			// don't add checksum to packet
-			utils::hook::set<uint8_t>(0x14233249E_g, 0);
-
-			// Recreate NET_SendPacket to increase max packet size
-			//utils::hook::jump(0x1423323B0_g, net_sendpacket_stub);
-
-			// set initial connection state to challenging
-			utils::hook::set<uint32_t>(0x14134C6E0_g, 4);
-
-			// intercept command handling
-			utils::hook::call(0x14134D146_g, utils::hook::assemble(handle_command_stub));
-
-			// don't kick clients without dw handle
-			utils::hook::set<uint8_t>(0x14224DEAD_g, 0xEB);
-
-			// Skip DW stuff in NetAdr_ToString
-			utils::hook::set<uint8_t>(0x142172EF2_g, 0xEB);
-
-			// NA_IP -> NA_RAWIP in NetAdr_ToString
-			utils::hook::set<uint8_t>(0x142172ED4_g, game::NA_RAWIP);
-
-			// Kill 'echo' OOB handler
-			utils::hook::set<uint8_t>(0x14134D0FB_g, 0xEB);
+			HandlePacketInternal_hook.create(0x141EF7FE0_g, HandlePacketInternal_stub);
 
 			// Truncate error string to make sure there are no buffer overruns later
 			utils::hook::call(0x14134D206_g, com_error_oob_stub);
-
-			// TODO: Fix that
-			scheduler::once(create_ip_socket, scheduler::main);
-
-			// Kill lobby system
-			handle_packet_internal_hook.create(0x141EF7FE0_g, &handle_packet_internal_stub);
-
-			// Kill voice chat
-			utils::hook::set<uint32_t>(0x141359310_g, 0xC3C03148);
-
-			// Don't let the game bind sockets anymore
-			utils::hook::set(0x15AAE9344_g, bind_stub);
 
 			// Set cl_maxpackets to 100
 			utils::hook::set<uint8_t>(0x1412FF342_g, 100 - 15);

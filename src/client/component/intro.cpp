@@ -32,6 +32,4 @@ namespace intro
 	};
 }
 
-#ifdef DEV_BUILD
 REGISTER_COMPONENT(intro::component)
-#endif
