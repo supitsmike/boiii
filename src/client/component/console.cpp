@@ -7,34 +7,23 @@
 
 #include <utils/thread.hpp>
 #include <utils/hook.hpp>
-#include <utils/flags.hpp>
 #include <utils/concurrency.hpp>
 #include <utils/image.hpp>
 
-#define CONSOLE_BUFFER_SIZE 16384
-#define WINDOW_WIDTH 608
+constexpr auto console_buffer_size = 0x4000;
+constexpr auto window_width = 608;
 
 namespace console
 {
 	namespace
 	{
-		utils::image::object logo;
+		utils::image::object codLogo;
 		std::atomic_bool started{false};
 		std::atomic_bool terminate_runner{false};
 		utils::concurrency::container<std::function<void(const std::string& message)>> interceptor{};
 		utils::concurrency::container<std::queue<std::string>> message_queue{};
 
-		void print_message(const char* message)
-		{
-#ifndef NDEBUG
-			OutputDebugStringA(message);
-#endif
-
-			if (started && !terminate_runner)
-			{
-				game::Com_Printf(0, 0, "%s", message);
-			}
-		}
+		utils::hook::detour Sys_CreateConsole_Stub;
 
 		void queue_message(const char* message)
 		{
@@ -48,20 +37,8 @@ namespace console
 
 			message_queue.access([message](std::queue<std::string>& queue)
 			{
-				queue.push(message);
+				queue.emplace(message);
 			});
-		}
-
-		void print_message_to_console(const char* message)
-		{
-			static auto print_func = utils::hook::assemble([](utils::hook::assembler& a)
-			{
-				a.push(rbx);
-				a.mov(eax, 0x8030);
-				a.jmp(0x142332AA7_g);
-			});
-
-			static_cast<void(*)(const char*)>(print_func)(message);
 		}
 
 		std::queue<std::string> empty_message_queue()
@@ -77,131 +54,119 @@ namespace console
 			return current_queue;
 		}
 
-		void print_stub(const char* fmt, ...)
+		void printf_Hook(const char* fmt, ...)
 		{
 			va_list ap;
 			va_start(ap, fmt);
 
-			char buffer[1024]{0};
-			const int res = vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, fmt, ap);
-			(void)res;
-			print_message(buffer);
+			char buffer[1024]{};
+			auto _ = vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, fmt, ap);
+
+			if (started && !terminate_runner)
+			{
+				game::Com_Printf(0, 0, "%s", buffer);
+			}
 
 			va_end(ap);
 		}
 
-		INT_PTR get_gray_brush()
+		LRESULT ConWndProc(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM lParam)
 		{
-			static utils::image::object b(CreateSolidBrush(RGB(50, 50, 50)));
-			return reinterpret_cast<INT_PTR>(b.get());
-		}
-
-		LRESULT con_wnd_proc(const HWND hwnd, const UINT msg, const WPARAM wparam, const LPARAM lparam)
-		{
-			switch (msg)
+			switch (uMsg)
 			{
 			case WM_CTLCOLOREDIT:
 			case WM_CTLCOLORSTATIC:
-				SetBkColor(reinterpret_cast<HDC>(wparam), RGB(50, 50, 50));
-				SetTextColor(reinterpret_cast<HDC>(wparam), RGB(232, 230, 227));
-				return get_gray_brush();
+			{
+				const auto hdc = reinterpret_cast<HDC>(wParam);
+				SetBkColor(hdc, RGB(36, 36, 36));
+				SetTextColor(hdc, RGB(240, 240, 240));
+
+				static utils::image::object b(CreateSolidBrush(RGB(36, 36, 36)));
+				return reinterpret_cast<INT_PTR>(b.get());
+			}
 			case WM_CLOSE:
 				game::Cbuf_AddText(0, "quit\n");
 				[[fallthrough]];
 			default:
-				return utils::hook::invoke<LRESULT>(0x142332960_g, hwnd, msg, wparam, lparam);
+				return utils::hook::invoke<LRESULT>(0x142332960_g, hWnd, uMsg, wParam, lParam);
 			}
 		}
 
-		LRESULT input_line_wnd_proc(const HWND hwnd, const UINT msg, const WPARAM wparam, const LPARAM lparam)
+		void Sys_CreateConsole_Hook(const HINSTANCE hInstance)
 		{
-			return utils::hook::invoke<LRESULT>(0x142332C60_g, hwnd, msg, wparam, lparam);
-		}
-
-		void sys_create_console_stub(const HINSTANCE h_instance)
-		{
-			char text[CONSOLE_BUFFER_SIZE]{0};
-
-			const auto* class_name = "CoD Black Ops III WinConsole";
-			const auto* window_name = "CoD Black Ops III Console";
+			char text[console_buffer_size]{0};
 
 			WNDCLASSA wnd_class{};
-			wnd_class.style = 0;
-			wnd_class.lpfnWndProc = con_wnd_proc;
-			wnd_class.cbClsExtra = 0;
-			wnd_class.cbWndExtra = 0;
-			wnd_class.hInstance = h_instance;
-			wnd_class.hIcon = LoadIconA(h_instance, reinterpret_cast<LPCSTR>(1));
-			wnd_class.hCursor = LoadCursorA(nullptr, reinterpret_cast<LPCSTR>(0x7F00));
+			wnd_class.style = NULL;
+			wnd_class.lpfnWndProc = ConWndProc;
+			wnd_class.cbClsExtra = NULL;
+			wnd_class.cbWndExtra = NULL;
+			wnd_class.hInstance = hInstance;
+			wnd_class.hIcon = LoadIcon(hInstance, RT_CURSOR);
+			wnd_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
 			wnd_class.hbrBackground = CreateSolidBrush(RGB(50, 50, 50));
 			wnd_class.lpszMenuName = nullptr;
-			wnd_class.lpszClassName = class_name;
+			wnd_class.lpszClassName = "CoD Black Ops III WinConsole";
+			if (!RegisterClass(&wnd_class)) return;
 
-			if (!RegisterClassA(&wnd_class))
-			{
-				return;
-			}
-
-			RECT rect{};
+			RECT rect;
 			rect.left = 0;
-			rect.right = 620;
 			rect.top = 0;
+			rect.right = 620;
 			rect.bottom = 450;
 			AdjustWindowRect(&rect, 0x80CA0000, 0);
 
-			auto dc = GetDC(GetDesktopWindow());
-			const auto swidth = GetDeviceCaps(dc, 8);
-			const auto sheight = GetDeviceCaps(dc, 10);
-			ReleaseDC(GetDesktopWindow(), dc);
+			auto hdc = GetDC(GetDesktopWindow());
+			const auto windowWidth = GetDeviceCaps(hdc, HORZRES);
+			const auto windowHeight = GetDeviceCaps(hdc, VERTRES);
+			ReleaseDC(GetDesktopWindow(), hdc);
 
 			utils::hook::set<int>(game::s_wcd::windowWidth, (rect.right - rect.left + 1));
 			utils::hook::set<int>(game::s_wcd::windowHeight, (rect.bottom - rect.top + 1));
 
-			utils::hook::set<HWND>(game::s_wcd::hWnd, CreateWindowExA(
-				                       0, class_name, window_name, 0x80CA0000, (swidth - 600) / 2, (sheight - 450) / 2,
-				                       rect.right - rect.left + 1, rect.bottom - rect.top + 1, nullptr, nullptr,
-				                       h_instance, nullptr));
+			utils::hook::set<HWND>(game::s_wcd::hWnd, CreateWindowEx(
+				                       NULL, "CoD Black Ops III WinConsole", "CoD Black Ops III Console", WS_POPUP | 0xCA0000,
+				                       (windowWidth - 600) / 2, (windowHeight - 450) / 2, rect.right - rect.left + 1,
+				                       rect.bottom - rect.top + 1, nullptr, nullptr, hInstance, nullptr));
+			if (!*game::s_wcd::hWnd) return;
 
-			if (!*game::s_wcd::hWnd)
+			hdc = GetDC(*game::s_wcd::hWnd);
+			const auto cHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+			utils::hook::set<HFONT>(game::s_wcd::hfBufferFont,
+			                        CreateFont(-cHeight, 0, 0, 0, 300, NULL, NULL, NULL, DEFAULT_CHARSET, NULL, NULL,
+			                                   NULL, FIXED_PITCH | FF_MODERN, "Courier New"));
+			ReleaseDC(*game::s_wcd::hWnd, hdc);
+
+			if (codLogo)
 			{
-				return;
+				utils::hook::set<HWND>(game::s_wcd::codLogo,
+				                       CreateWindowEx(0, "Static", nullptr, WS_VISIBLE | WS_CHILDWINDOW | SS_BITMAP, 5,
+				                                      5, 0, 0, *game::s_wcd::hWnd, reinterpret_cast<HMENU>(1),
+				                                      hInstance, nullptr));
+				SendMessage(*game::s_wcd::codLogo, STM_SETIMAGE, IMAGE_BITMAP, codLogo);
 			}
 
-			// create fonts
-			dc = GetDC(*game::s_wcd::hWnd);
-			const auto n_height = MulDiv(8, GetDeviceCaps(dc, 90), 72);
+			utils::hook::set<HWND>(game::s_wcd::hwndInputLine,
+			                       CreateWindowEx(0, "edit", nullptr,
+			                                      WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL, 6, 400,
+			                                      window_width, 20, *game::s_wcd::hWnd, reinterpret_cast<HMENU>(101),
+			                                      hInstance, nullptr));
+			utils::hook::set<HWND>(game::s_wcd::hwndBuffer,
+			                       CreateWindowEx(0, "edit", nullptr,
+			                                      WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_AUTOVSCROLL |
+			                                      ES_MULTILINE, 6, 70, window_width, 324, *game::s_wcd::hWnd,
+			                                      reinterpret_cast<HMENU>(100), hInstance, nullptr));
+			SendMessage(*game::s_wcd::hwndBuffer, WM_SETFONT, reinterpret_cast<WPARAM>(*game::s_wcd::hfBufferFont), NULL);
 
-			utils::hook::set<HFONT>(game::s_wcd::hfBufferFont, CreateFontA(
-				                        -n_height, 0, 0, 0, 300, 0, 0, 0, 1u, 0, 0, 0, 0x31u, "Courier New"));
-
-			ReleaseDC(*game::s_wcd::hWnd, dc);
-
-			if (logo)
-			{
-				utils::hook::set<HWND>(game::s_wcd::codLogo, CreateWindowExA(
-					                       0, "Static", nullptr, 0x5000000Eu, 5, 5, 0, 0, *game::s_wcd::hWnd,
-					                       reinterpret_cast<HMENU>(1), h_instance, nullptr));
-				SendMessageA(*game::s_wcd::codLogo, STM_SETIMAGE, IMAGE_BITMAP, logo);
-			}
-
-			// create the input line
-			utils::hook::set<HWND>(game::s_wcd::hwndInputLine, CreateWindowExA(
-				                       0, "edit", nullptr, 0x50800080u, 6, 400, WINDOW_WIDTH, 20, *game::s_wcd::hWnd,
-				                       reinterpret_cast<HMENU>(0x65), h_instance, nullptr));
-			utils::hook::set<HWND>(game::s_wcd::hwndBuffer, CreateWindowExA(
-				                       0, "edit", nullptr, 0x50A00844u, 6, 70, WINDOW_WIDTH, 324, *game::s_wcd::hWnd,
-				                       reinterpret_cast<HMENU>(0x64), h_instance, nullptr));
-			SendMessageA(*game::s_wcd::hwndBuffer, WM_SETFONT, reinterpret_cast<WPARAM>(*game::s_wcd::hfBufferFont), 0);
-
-			utils::hook::set<WNDPROC>(game::s_wcd::SysInputLineWndProc, reinterpret_cast<WNDPROC>(SetWindowLongPtrA(
-				                          *game::s_wcd::hwndInputLine, -4,
-				                          reinterpret_cast<LONG_PTR>(input_line_wnd_proc))));
-			SendMessageA(*game::s_wcd::hwndInputLine, WM_SETFONT, reinterpret_cast<WPARAM>(*game::s_wcd::hfBufferFont),
-			             0);
+			utils::hook::set<WNDPROC>(game::s_wcd::SysInputLineWndProc,
+			                          reinterpret_cast<WNDPROC>(SetWindowLongPtr(
+				                          *game::s_wcd::hwndInputLine, GWLP_WNDPROC,
+										  reinterpret_cast<LONG_PTR>(*game::InputLineWndProc))));
+			SendMessage(*game::s_wcd::hwndInputLine, WM_SETFONT, reinterpret_cast<WPARAM>(*game::s_wcd::hfBufferFont), 0);
 
 			SetFocus(*game::s_wcd::hwndInputLine);
-			game::Con_GetTextCopy(text, std::min(0x4000, static_cast<int>(sizeof(text))));
-			SetWindowTextA(*game::s_wcd::hwndBuffer, text);
+			game::Con_GetTextCopy(text, std::min(console_buffer_size, static_cast<int>(sizeof(text))));
+			SetWindowText(*game::s_wcd::hwndBuffer, text);
 		}
 	}
 
@@ -230,22 +195,14 @@ namespace console
 			utils::hook::set<uint8_t>(0x14133D2FE_g, 0xEB); // Always enable ingame console
 			utils::hook::jump(0x141344E44_g, 0x141344E2E_g); // Remove the need to type '\' or '/' to send a console command
 
-			if (utils::nt::is_wine() && !utils::flags::has_flag("console"))
-			{
-				return;
-			}
-
-			utils::hook::jump(printf, print_stub);
+			utils::hook::jump(printf, printf_Hook);
 
 			utils::hook::jump(0x142332C30_g, queue_message);
 			utils::hook::nop(0x142332C4A_g, 2); // Print from every thread
 
-			//const auto self = utils::nt::library::get_by_address(sys_create_console_stub);
-			//logo = LoadImageA(self.get_handle(), MAKEINTRESOURCEA(IMAGE_LOGO), 0, 0, 0, LR_COPYFROMRESOURCE);
-
 			const auto res = utils::nt::load_resource(IMAGE_LOGO);
 			const auto img = utils::image::load_image(res);
-			logo = utils::image::create_bitmap(img);
+			codLogo = utils::image::create_bitmap(img);
 
 			terminate_runner = false;
 
@@ -265,7 +222,13 @@ namespace console
 
 					if (!message_buffer.empty())
 					{
-						print_message_to_console(message_buffer.data());
+						static auto print_func = utils::hook::assemble([](utils::hook::assembler& a) {
+							a.push(rbx);
+							a.mov(eax, 0x8030);
+							a.jmp(0x142332AA7_g);
+						});
+
+						static_cast<void(*)(const char*)>(print_func)(message_buffer.data());
 					}
 
 					std::this_thread::sleep_for(5ms);
@@ -275,8 +238,7 @@ namespace console
 			this->console_runner_ = utils::thread::create_named_thread("Console Window", [this]
 			{
 				{
-					static utils::hook::detour sys_create_console_hook;
-					sys_create_console_hook.create(0x142332E00_g, sys_create_console_stub);
+					Sys_CreateConsole_Stub.create(0x142332E00_g, Sys_CreateConsole_Hook);
 
 					game::Sys_ShowConsole();
 					started = true;
