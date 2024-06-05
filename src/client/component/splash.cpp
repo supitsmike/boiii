@@ -1,7 +1,6 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
 
-#include "splash.hpp"
 #include "resource.hpp"
 
 #include <utils/nt.hpp>
@@ -17,9 +16,6 @@ namespace splash
 
 		utils::image::object load_splash_image()
 		{
-			//const auto self = utils::nt::library::get_by_address(load_splash_image);
-			//return LoadImageA(self, MAKEINTRESOURCE(IMAGE_SPLASH), IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR);
-
 			const auto res = utils::nt::load_resource(IMAGE_SPLASH);
 			const auto img = utils::image::load_image(res);
 			return utils::image::create_bitmap(img);
@@ -32,12 +28,12 @@ namespace splash
 				ShowWindow(window, SW_HIDE);
 				DestroyWindow(window);
 				window = nullptr;
-
+			
 				if (window_thread.joinable())
 				{
 					window_thread.join();
 				}
-
+			
 				window = nullptr;
 			}
 			else if (window_thread.joinable())
@@ -48,93 +44,67 @@ namespace splash
 
 		void show()
 		{
-			WNDCLASSA wnd_class;
-
 			const auto self = utils::nt::library::get_by_address(load_splash_image);
+			const auto hInstance = utils::nt::library{};
 
-			wnd_class.style = CS_DROPSHADOW;
-			wnd_class.cbClsExtra = 0;
-			wnd_class.cbWndExtra = 0;
-			wnd_class.lpszMenuName = nullptr;
-			wnd_class.lpfnWndProc = DefWindowProcA;
-			wnd_class.hInstance = self;
-			//wnd_class.hIcon = LoadIconA(self, MAKEINTRESOURCEA(ID_ICON));
-			wnd_class.hCursor = LoadCursorA(nullptr, IDC_APPSTARTING);
-			wnd_class.hbrBackground = reinterpret_cast<HBRUSH>(6);
-			wnd_class.lpszClassName = "Black Ops III Splash Screen";
+			WNDCLASSA wndClass;
+			wndClass.style = CS_DROPSHADOW;
+			wndClass.cbClsExtra = NULL;
+			wndClass.cbWndExtra = NULL;
+			wndClass.lpszMenuName = nullptr;
+			wndClass.lpfnWndProc = DefWindowProc;
+			wndClass.hInstance = hInstance;
+			wndClass.hIcon = LoadIcon(hInstance, RT_CURSOR);
+			wndClass.hCursor = LoadCursor(nullptr, IDC_APPSTARTING);
+			wndClass.hbrBackground = reinterpret_cast<HBRUSH>(6);
+			wndClass.lpszClassName = "CoD Splash Screen";
+			if (!RegisterClassA(&wndClass)) return;
 
-			if (RegisterClassA(&wnd_class))
-			{
-				const auto x_pixels = GetSystemMetrics(SM_CXFULLSCREEN);
-				const auto y_pixels = GetSystemMetrics(SM_CYFULLSCREEN);
+			const auto screenWidth = GetSystemMetrics(SM_CXFULLSCREEN);
+			const auto screenHeight = GetSystemMetrics(SM_CYFULLSCREEN);
 
-				if (image)
-				{
-					window = CreateWindowExA(WS_EX_APPWINDOW, "Black Ops III Splash Screen", "BOIII",
-					                         WS_POPUP | WS_SYSMENU,
-					                         (x_pixels - 320) / 2, (y_pixels - 100) / 2, 320, 100, nullptr,
-					                         nullptr,
-					                         self, nullptr);
+			if (image == nullptr) return;
 
-					if (window)
-					{
-						auto* const image_window = CreateWindowExA(0, "Static", nullptr, WS_CHILD | WS_VISIBLE | 0xEu,
-						                                           0, 0,
-						                                           320, 100, window, nullptr, self, nullptr);
-						if (image_window)
-						{
-							RECT rect;
-							SendMessageA(image_window, STM_SETIMAGE, IMAGE_BITMAP, image);
-							GetWindowRect(image_window, &rect);
+			window = CreateWindowEx(WS_EX_APPWINDOW, "CoD Splash Screen", "Black Ops III",
+				WS_POPUP | WS_SYSMENU, (screenWidth - 320) / 2, (screenHeight - 100) / 2, 320,
+				100, nullptr, nullptr, hInstance, nullptr);
+			if (window == nullptr) return;
 
-							const int width = rect.right - rect.left;
-							rect.left = (x_pixels - width) / 2;
+			const HWND codLogo = CreateWindowEx(NULL, "Static", nullptr, WS_VISIBLE | WS_CHILDWINDOW | SS_BITMAP, NULL, NULL, 320, 100, window, nullptr, self, nullptr);
+			if (codLogo == nullptr) return;
 
-							const int height = rect.bottom - rect.top;
-							rect.top = (y_pixels - height) / 2;
+			RECT rect;
+			SendMessage(codLogo, STM_SETIMAGE, IMAGE_BITMAP, image);
+			GetWindowRect(codLogo, &rect);
 
-							rect.right = rect.left + width;
-							rect.bottom = rect.top + height;
-							AdjustWindowRect(&rect, WS_CHILD | WS_VISIBLE | 0xEu, 0);
-							SetWindowPos(window, nullptr, rect.left, rect.top, rect.right - rect.left,
-							             rect.bottom - rect.top, SWP_NOZORDER);
+			const int width = rect.right - rect.left;
+			const int height = rect.bottom - rect.top;
+			rect.left = (screenWidth - width) / 2;
+			rect.top = (screenHeight - height) / 2;
+			rect.right = rect.left + width;
+			rect.bottom = rect.top + height;
 
-							SetWindowRgn(window,
-							             CreateRoundRectRgn(0, 0, rect.right - rect.left, rect.bottom - rect.top, 15,
-							                                15), TRUE);
+			AdjustWindowRect(&rect, WS_VISIBLE | WS_CHILDWINDOW | SS_BITMAP, NULL);
+			SetWindowPos(window, nullptr, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
+			SetWindowRgn(window, CreateRoundRectRgn(NULL, NULL, rect.right - rect.left, rect.bottom - rect.top, 15, 15), TRUE);
 
-							ShowWindow(window, SW_SHOW);
-							UpdateWindow(window);
-						}
-					}
-				}
-			}
+			ShowWindow(window, SW_SHOW);
+			UpdateWindow(window);
 		}
 
 		bool draw_frame()
 		{
-			if (!window)
-			{
-				return false;
-			}
+			if (!window) return false;
 
-			MSG msg{};
+			MSG msg;
 			bool success = true;
-
-			while (PeekMessageW(&msg, nullptr, NULL, NULL, PM_REMOVE))
+			while (PeekMessage(&msg, nullptr, NULL, NULL, PM_REMOVE))
 			{
 				TranslateMessage(&msg);
-				DispatchMessageW(&msg);
+				DispatchMessage(&msg);
 
-				if (msg.message == WM_DESTROY && msg.hwnd == window)
-				{
-					PostQuitMessage(0);
-				}
-
-				if (msg.message == WM_QUIT)
-				{
-					success = false;
-				}
+				if (msg.message == WM_DESTROY && msg.hwnd == window) PostQuitMessage(0);
+				if (msg.message == WM_QUIT) success = false;
 			}
 			return success;
 		}
@@ -148,7 +118,7 @@ namespace splash
 			}
 
 			window = nullptr;
-			UnregisterClassA("Black Ops III Splash Screen", utils::nt::library{});
+			UnregisterClass("CoD Splash Screen", utils::nt::library{});
 		}
 	}
 
@@ -157,8 +127,7 @@ namespace splash
 		component()
 		{
 			image = load_splash_image();
-			window_thread = std::thread([this]
-			{
+			window_thread = std::thread([this] {
 				draw();
 			});
 		}
@@ -177,22 +146,6 @@ namespace splash
 			destroy_window();
 		}
 	};
-
-	void hide()
-	{
-		if (window && IsWindow(window))
-		{
-			ShowWindow(window, SW_HIDE);
-			UpdateWindow(window);
-		}
-
-		destroy_window();
-	}
-
-	HWND get_window()
-	{
-		return window;
-	}
 }
 
 REGISTER_COMPONENT(splash::component)
