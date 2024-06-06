@@ -642,22 +642,6 @@ namespace arxan
 
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
-
-		const char* get_command_line_a_stub()
-		{
-			static auto cmd = []
-			{
-				std::string cmd_line = GetCommandLineA();
-				if (!strstr(cmd_line.data(), "fs_game"))
-				{
-					cmd_line += " +set fs_game \"boiii\"";
-				}
-
-				return cmd_line;
-			}();
-
-			return cmd.data();
-		}
 	}
 
 	int WINAPI get_system_metrics_stub(const int index)

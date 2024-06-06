@@ -205,7 +205,6 @@ namespace ui_scripting
 			lua["print"] = function(reinterpret_cast<game::hks::lua_function>(0x141D30290_g)); // hks::base_print
 			lua["table"]["unpack"] = lua["unpack"];
 			lua["luiglobals"] = lua;
-			lua["Engine"]["IsBOIII"] = true;
 		}
 
 		void start()

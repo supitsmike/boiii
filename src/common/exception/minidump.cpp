@@ -22,11 +22,11 @@ namespace exception
 
 		std::string get_temp_filename()
 		{
-			char filename[MAX_PATH] = {0};
-			char pathname[MAX_PATH] = {0};
+			char filename[MAX_PATH]{};
+			char pathname[MAX_PATH]{};
 
 			GetTempPathA(sizeof(pathname), pathname);
-			GetTempFileNameA(pathname, "boiii-", 0, filename);
+			GetTempFileNameA(pathname, "", 0, filename);
 			return filename;
 		}
 
