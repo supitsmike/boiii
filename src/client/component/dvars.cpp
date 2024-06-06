@@ -52,10 +52,8 @@ namespace dvars
 
 		void read_dvar_name_hashes_data(std::unordered_map<std::uint32_t, std::string>& map)
 		{
-			const auto path = game::get_appdata_path() / "data/lookup_tables/dvar_list.txt";
 			std::string data;
-
-			if (!utils::io::read_file(path, &data))
+			if (!utils::io::read_file("data/lookup_tables/dvar_list.txt", &data))
 			{
 				printf("Failed to read Dvar lookup table\n");
 				return;

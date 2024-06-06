@@ -213,9 +213,7 @@ namespace ui_scripting
 			setup_lua_globals();
 
 			const utils::nt::library host{};
-			const auto folder = "ui_scripts/";
-			load_scripts((game::get_appdata_path() / "data" / folder).string());
-			load_scripts((host.get_folder() / "boiii" / folder).string());
+			load_scripts("data/ui_scripts/");
 		}
 
 		void try_start()
@@ -247,11 +245,9 @@ namespace ui_scripting
 			{
 				// Fetch the names of the local files so file overrides are already handled
 				globals = {};
-				const utils::nt::library host{};
 				doneFirstSnapshot = false;
 
-				load_local_script_files((game::get_appdata_path() / "data/ui_scripts/").string());
-				load_local_script_files((host.get_folder() / "boiii/ui_scripts/").string());
+				load_local_script_files("data/ui_scripts/");
 				return;
 			}
 			try_start();

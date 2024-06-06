@@ -83,8 +83,6 @@ namespace game
 			return static_cast<func_type*>(arxan::detail::callstack_proxy_addr)(args...);
 		}
 	};
-
-	std::filesystem::path get_appdata_path();
 }
 
 inline size_t operator"" _g(const size_t val)

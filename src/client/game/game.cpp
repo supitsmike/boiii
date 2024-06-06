@@ -36,26 +36,4 @@ namespace game
 	{
 		MessageBoxA(nullptr, text.data(), title.data(), MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST);
 	}
-
-	std::filesystem::path get_appdata_path()
-	{
-		static const auto appdata_path = []
-		{
-			PWSTR path;
-			if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &path)))
-			{
-				throw std::runtime_error("Failed to read APPDATA path!");
-			}
-
-			auto _ = utils::finally([&path]
-			{
-				CoTaskMemFree(path);
-			});
-
-			static auto appdata = std::filesystem::path(path) / "boiii";
-			return appdata;
-		}();
-
-		return appdata_path;
-	}
 }
