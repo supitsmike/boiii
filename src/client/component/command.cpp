@@ -8,6 +8,9 @@
 
 #include <game/game.hpp>
 
+#include "getinfo.hpp"
+#include "scheduler.hpp"
+
 namespace command
 {
 	namespace
@@ -221,10 +224,33 @@ namespace command
 
 	struct component final : component_interface
 	{
+		static_assert(offsetof(game::client_s, bIsTestClient) == 0xBB360);
+
 		void post_unpack() override
 		{
 			// Disable whitelist
 			utils::hook::jump(0x1420EE860_g, update_whitelist_stub);
+
+			// Register custom commands
+			command::add("spawnBot", [](const command::params& params)
+			{
+				if (!getinfo::is_host()) return;
+
+				size_t count = 1;
+				if (params.size() > 1)
+				{
+					if (params[1] == "all"s) count = 18;
+					else count = atoi(params[1]);
+				}
+
+				scheduler::once([count]
+				{
+					for (size_t i = 0; i < count; ++i)
+					{
+						if (!game::SV_AddTestClient()) break;
+					}
+				}, scheduler::server);
+			});
 		}
 	};
 }
