@@ -60,7 +60,7 @@ namespace console
 			va_start(ap, fmt);
 
 			char buffer[1024]{};
-			auto _ = vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, fmt, ap);
+			vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, fmt, ap);
 
 			if (started && !terminate_runner)
 			{

@@ -19,7 +19,7 @@ namespace patches
 			va_start(ap, fmt);
 
 			char buffer[0x1000]{};
-			auto _ = vsnprintf_s(buffer, _TRUNCATE, fmt, ap);
+			vsnprintf_s(buffer, _TRUNCATE, fmt, ap);
 
 			va_end(ap);
 
