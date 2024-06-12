@@ -11,5 +11,3 @@
 #define DW_FASTFILE           305
 #define DW_KEYS               306
 #define DW_QOSCONFIG          307
-
-#define TLS_DLL               308
