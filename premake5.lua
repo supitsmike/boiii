@@ -111,23 +111,25 @@ project "common"
 	dependencies.imports()
 
 project "client"
-	kind "WindowedApp"
+	kind "SharedLib"
 	language "C++"
 
-	targetname "boiii"
+	targetname "d3d11"
 
 	pchheader "std_include.hpp"
 	pchsource "src/client/std_include.cpp"
 
-	files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*"}
+	files {"./src/client/**.rc", "./src/client/**.hpp", "./src/client/**.cpp", "./src/client/resources/**.*", "./src/client/proxy/**.*"}
 
 	includedirs {"./src/client", "./src/common", "%{prj.location}/src"}
 
 	resincludedirs {"$(ProjectDir)src"}
 
 	links {"common"}
+	
+	buildaction ("Masm")
 
-	prebuildcommands {"pushd %{_MAIN_SCRIPT_DIR}", "tools\\premake5 generate-buildinfo", "popd"}
+	prebuildcommands {"pushd %{_MAIN_SCRIPT_DIR}", "popd"}
 
 	if _OPTIONS["copy-to"] then
 		postbuildcommands {"copy /y \"$(TargetPath)\" \"" .. _OPTIONS["copy-to"] .. "\""}
