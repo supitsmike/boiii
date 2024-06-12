@@ -1,13 +1,11 @@
 #include <std_include.hpp>
 
 #include "loader/component_loader.hpp"
-#include "loader/loader.hpp"
 
 #include <utils/finally.hpp>
 #include <utils/hook.hpp>
 #include <utils/nt.hpp>
 #include <utils/io.hpp>
-#include <utils/flags.hpp>
 
 #include "game/game.hpp"
 #include "proxy/proxy.hpp"
@@ -45,46 +43,46 @@ namespace
 		utils::io::remove_file(game_path);
 	}
 
-	PIMAGE_TLS_CALLBACK* get_tls_callbacks()
-	{
-		const utils::nt::library game{};
-		const auto& entry = game.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
-		if (!entry.VirtualAddress || !entry.Size)
-		{
-			return nullptr;
-		}
-
-		const auto* tls_dir = reinterpret_cast<IMAGE_TLS_DIRECTORY*>(game.get_ptr() + entry.VirtualAddress);
-		return reinterpret_cast<PIMAGE_TLS_CALLBACK*>(tls_dir->AddressOfCallBacks);
-	}
-
-	void run_tls_callbacks(const DWORD reason)
-	{
-		if (!g_call_tls_callbacks)
-		{
-			return;
-		}
-
-		auto* callback = get_tls_callbacks();
-		while (callback && *callback)
-		{
-			(*callback)(GetModuleHandleA(nullptr), reason, nullptr);
-			++callback;
-		}
-	}
-
-	[[maybe_unused]] thread_local struct tls_runner
-	{
-		tls_runner()
-		{
-			run_tls_callbacks(DLL_THREAD_ATTACH);
-		}
-
-		~tls_runner()
-		{
-			run_tls_callbacks(DLL_THREAD_DETACH);
-		}
-	} tls_runner;
+	//PIMAGE_TLS_CALLBACK* get_tls_callbacks()
+	//{
+	//	const utils::nt::library game{};
+	//	const auto& entry = game.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
+	//	if (!entry.VirtualAddress || !entry.Size)
+	//	{
+	//		return nullptr;
+	//	}
+	//
+	//	const auto* tls_dir = reinterpret_cast<IMAGE_TLS_DIRECTORY*>(game.get_ptr() + entry.VirtualAddress);
+	//	return reinterpret_cast<PIMAGE_TLS_CALLBACK*>(tls_dir->AddressOfCallBacks);
+	//}
+	//
+	//void run_tls_callbacks(const DWORD reason)
+	//{
+	//	if (!g_call_tls_callbacks)
+	//	{
+	//		return;
+	//	}
+	//
+	//	auto* callback = get_tls_callbacks();
+	//	while (callback && *callback)
+	//	{
+	//		(*callback)(GetModuleHandleA(nullptr), reason, nullptr);
+	//		++callback;
+	//	}
+	//}
+	//
+	//[[maybe_unused]] thread_local struct tls_runner
+	//{
+	//	tls_runner()
+	//	{
+	//		run_tls_callbacks(DLL_THREAD_ATTACH);
+	//	}
+	//
+	//	~tls_runner()
+	//	{
+	//		run_tls_callbacks(DLL_THREAD_DETACH);
+	//	}
+	//} tls_runner;
 
 	void enable_dpi_awareness()
 	{
