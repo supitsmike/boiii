@@ -345,8 +345,8 @@ if Dvar.cg_unlockall_loot:get() == true then
 	Engine.SetDvar("ui_enableAllHeroes", 1)
 end
 
-LUI.createMenu.BoiiiStatsMenu = function(controller)
-	local self = CoD.Menu.NewForUIEditor("BoiiiStatsMenu")
+LUI.createMenu.GameSettings_Stats = function(controller)
+	local self = CoD.Menu.NewForUIEditor("GameSettings_Stats")
 	if PreLoadFunc then
 		PreLoadFunc(self, controller)
 	end
@@ -355,7 +355,7 @@ LUI.createMenu.BoiiiStatsMenu = function(controller)
 	self:setLeftRight(true, true, 0, 0)
 	self:setTopBottom(true, true, 0, 0)
 	self:playSound("menu_open", controller)
-	self.buttonModel = Engine.CreateModel(Engine.GetModelForController(controller), "BoiiiStatsMenu.buttonPrompts")
+	self.buttonModel = Engine.CreateModel(Engine.GetModelForController(controller), "GameSettings_Stats.buttonPrompts")
 	self.anyChildUsesUpdateState = true
 
 	local GameSettingsBackground = CoD.GameSettings_Background.new(self, controller)
@@ -410,7 +410,7 @@ LUI.createMenu.BoiiiStatsMenu = function(controller)
 		element.GameSettingsBackground:close()
 		element.Options:close()
 		Engine.UnsubscribeAndFreeModel(Engine.GetModel(Engine.GetModelForController(controller),
-			"BoiiiStatsMenu.buttonPrompts"))
+			"GameSettings_Stats.buttonPrompts"))
 	end)
 
 	if PostLoadFunc then
