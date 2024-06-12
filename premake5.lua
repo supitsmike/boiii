@@ -49,8 +49,8 @@ dependencies.load()
 workspace "boiii"
 	startproject "client"
 	location "./build"
-	objdir "%{wks.location}/obj"
-	targetdir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}"
+	objdir "%{wks.location}/!obj/%{cfg.buildcfg}/$(ProjectName)"
+	targetdir "%{wks.location}/bin/%{cfg.buildcfg}"
 
 	configurations {"Debug", "Release"}
 
