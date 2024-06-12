@@ -16,9 +16,6 @@
 	path = deps/libtommath
 	url = https://github.com/libtom/libtommath.git
 	branch = develop
-[submodule "deps/udis86"]
-	path = deps/udis86
-	url = https://github.com/vmt/udis86.git
 [submodule "deps/stb"]
 	path = deps/stb
 	url = https://github.com/nothings/stb.git
